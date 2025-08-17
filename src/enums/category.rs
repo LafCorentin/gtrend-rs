@@ -3,7 +3,7 @@
 use serde::Serialize;
 
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone, Copy)]
 pub enum Category {
     #[serde(rename  = "642")]
     ADDAndADHD,

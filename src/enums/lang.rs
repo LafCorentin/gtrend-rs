@@ -3,7 +3,7 @@
 use serde::Serialize;
 use strum_macros::Display;
 
-#[derive(Debug, Display, Serialize)]
+#[derive(Debug, Display, Serialize, Clone, Copy)]
 #[strum(serialize_all = "kebab_case")]
 pub enum Lang {
     AF,

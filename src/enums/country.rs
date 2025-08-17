@@ -4,7 +4,7 @@
 use serde::Serialize;
 use strum_macros::Display;
 
-#[derive(Debug, Display, Serialize)]
+#[derive(Debug, Display, Serialize, Clone, Copy)]
 pub enum Country {
     #[strum(serialize = "")]
     #[serde(rename = "")]
