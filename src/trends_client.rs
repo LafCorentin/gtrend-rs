@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use quick_xml::{Reader, events::Event};
 use reqwest::{
-    Client, IntoUrl,
+    Client,
     cookie::Jar,
     header::{ACCEPT_LANGUAGE, HeaderMap, HeaderValue, USER_AGENT},
 };
@@ -95,13 +95,11 @@ impl TrendsClient {
             .await?;
         let json_body = sanitize_google_json(&json_body_unsanitize);
 
-        print!("returned : {json_body}");
-
         let try_explore_result: Result<ExploreResult> =
             serde_json::from_str(json_body).map_err(|e| e.into());
 
         match try_explore_result {
-            Ok(explore_result) => Ok(ExploreClient::new(self.clone(), explore_result)),
+            Ok(explore_result) => Ok(ExploreClient::new(self.clone(), explore_result)?),
             Err(_) => Err(response_problem(json_body)),
         }
     }
@@ -183,23 +181,30 @@ pub struct ComparaisonElem {
 mod tests {
     use tokio::{fs::File, io::AsyncWriteExt};
 
-    use crate::{enums::period::PredefinedPeriod, trends_client::explore_client::WidgetId};
+    use crate::enums::period::PredefinedPeriod;
 
     use super::*;
 
     #[tokio::test]
     async fn test_request() {
         let request = Request::new(
-            vec![ComparaisonElem {
-                keyword: "test".to_string(),
-                geo: Country::US,
-                time: Period::Predefined(PredefinedPeriod::OneYear),
-            },
-            ComparaisonElem {
-                keyword: "google".to_string(),
-                geo: Country::US,
-                time: Period::Predefined(PredefinedPeriod::OneYear),
-            }],
+            vec![
+                ComparaisonElem {
+                    keyword: "test".to_string(),
+                    geo: Country::US,
+                    time: Period::Predefined(PredefinedPeriod::OneYear),
+                },
+                ComparaisonElem {
+                    keyword: "google".to_string(),
+                    geo: Country::US,
+                    time: Period::Predefined(PredefinedPeriod::OneYear),
+                },
+                ComparaisonElem {
+                    keyword: "find".to_string(),
+                    geo: Country::US,
+                    time: Period::Predefined(PredefinedPeriod::OneYear),
+                },
+            ],
             Category::All,
             Property::Web,
         )
@@ -208,24 +213,21 @@ mod tests {
         let client = TrendsClient::new(TrendsEndpoint::Default).await.unwrap();
         let res = client.explore(request).await.unwrap();
 
-        println!("{:#?}", res);
+        for (keyword, cat) in res.available_widgets() {
+            let keyword_name = match keyword.clone() {
+                explore_client::WidgetKeyword::All => "ALL".to_string(),
+                explore_client::WidgetKeyword::Keyword(s) => s,
+            };
+            println!("jsons/{keyword_name}_{cat:?}.json");
 
-        let timeseries = res.get_timeseries_as_json().await.unwrap(); 
-        let mut file = File::create("test/timeseries.json").await.unwrap();
-        file.write_all(timeseries.to_string().as_bytes()).await.unwrap();
+            let mut file = File::create(format!("jsons/{keyword_name}_{cat:?}.json"))
+                .await
+                .unwrap();
 
-        let geomap = res.get_geo_map_as_json().await.unwrap();
-        let mut file = File::create("test/geomap.json").await.unwrap();
-        file.write_all(geomap.to_string().as_bytes()).await.unwrap();
+            let data = res.get_widget_as_json(keyword.clone(), cat).await.unwrap();
 
-        let related_topics = res.get_related_topics_as_json().await.unwrap();
-        let mut file = File::create("test/related_topics.json").await.unwrap();
-        file.write_all(related_topics.to_string().as_bytes()).await.unwrap();
-
-        let related_queries = res.get_related_queries_as_json().await.unwrap();
-        let mut file = File::create("test/related_queries.json").await.unwrap();
-        file.write_all(related_queries.to_string().as_bytes()).await.unwrap();
-
+            file.write_all(data.to_string().as_bytes()).await.unwrap();
+        }
     }
 
     #[tokio::test]

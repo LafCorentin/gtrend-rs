@@ -1,90 +1,162 @@
+use std::collections::HashMap;
+
 use serde::Deserialize;
 
-use crate::{error::{Error, Result}, trends_client::TrendsClient};
+use crate::{
+    error::{Error, Result},
+    trends_client::{sanitize_google_json, TrendsClient},
+};
 
-#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum WidgetId {
+pub enum WidgetCategory {
     Timeseries,
     GeoMap,
     RelatedTopics,
     RelatedQueries,
 }
 
+impl TryFrom<&str> for WidgetCategory {
+    fn try_from(value: &str) -> Result<Self> {
+        if value.contains("TIMESERIES") {
+            Ok(WidgetCategory::Timeseries)
+        } else if value.contains("GEO_MAP") {
+            Ok(WidgetCategory::GeoMap)
+        } else if value.contains("RELATED_TOPICS") {
+            Ok(WidgetCategory::RelatedTopics)
+        } else if value.contains("RELATED_QUERIES") {
+            Ok(WidgetCategory::RelatedQueries)
+        } else {
+            Err(Error::UnexpectedResponse(format!(
+                "Irregular widget category: {value}"
+            )))
+        }
+    }
+
+    type Error = Error;
+}
+
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Hash)]
+pub enum WidgetKeyword {
+    All,
+    Keyword(String),
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Widget {
-    id: WidgetId,
     token: String,
     request: serde_json::Value,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ExploreResult {
-    widgets: Vec<Widget>,
+    widgets: Vec<serde_json::Value>,
     //skipping many items here
-}
-
-impl ExploreResult {
-    pub fn available_widgets(&self) -> Vec<WidgetId> {
-        self.widgets.iter().map(|w| w.id).collect()
-    }
-
-    fn get_widget(&self, widget_id: WidgetId) -> Result<&Widget> {
-        self.widgets
-            .iter()
-            .find(|w| w.id == widget_id)
-            .ok_or_else(|| Error::Params(format!("Widget {:?} not found", widget_id)))
-    }
 }
 
 #[derive(Debug)]
 pub struct ExploreClient {
     trends_client: TrendsClient,
-    explore_result: ExploreResult,
+    widgets: HashMap<(WidgetKeyword, WidgetCategory), Widget>,
 }
 
 impl ExploreClient {
-    pub fn new(trends_client: TrendsClient, explore_result: ExploreResult) -> Self {
-        Self {
-            trends_client,
-            explore_result,
+    pub fn new(trends_client: TrendsClient, explore_result: ExploreResult) -> Result<Self> {
+        let mut widgets = HashMap::new();
+        let mut keyword = WidgetKeyword::All;
+
+        for widget in &explore_result.widgets {
+            match widget
+                .get("template")
+                .ok_or_else(|| Error::UnexpectedResponse(format!("Irregular widget: {widget}")))?
+                .as_str()
+                .ok_or_else(|| Error::UnexpectedResponse(format!("Irregular widget: {widget}")))?
+            {
+                "fe" => {
+                    let category = WidgetCategory::try_from(
+                        widget
+                            .get("id")
+                            .ok_or_else(|| {
+                                Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
+                            })?
+                            .as_str()
+                            .ok_or_else(|| {
+                                Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
+                            })?,
+                    )?;
+
+                    widgets.insert(
+                        (keyword.clone(), category),
+                        serde_json::from_value(widget.clone())?,
+                    );
+                }
+                "fe_explore" => {
+                    keyword = WidgetKeyword::Keyword(
+                        widget
+                            .get("text")
+                            .ok_or_else(|| {
+                                Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
+                            })?
+                            .get("text")
+                            .ok_or_else(|| {
+                                Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
+                            })?
+                            .as_str()
+                            .ok_or_else(|| {
+                                Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
+                            })?
+                            .to_string(),
+                    );
+                }
+                _ => {
+                    return Err(Error::UnexpectedResponse(format!(
+                        "Irregular widget: {widget}"
+                    )));
+                }
+            }
         }
+
+        Ok(Self {
+            trends_client,
+            widgets,
+        })
     }
 
-    async fn get_widget(&self, widget_id: WidgetId) -> Result<String> {
-        let widget = self.explore_result.get_widget(widget_id)?;
-        let end_url = match widget.id {
-            WidgetId::Timeseries => "api/widgetdata/multiline",
-            WidgetId::GeoMap => "api/widgetdata/comparedgeo",
-            WidgetId::RelatedTopics => "api/widgetdata/relatedsearches",
-            WidgetId::RelatedQueries => "api/widgetdata/relatedsearches",
+    pub fn available_widgets(&self) -> Vec<(WidgetKeyword, WidgetCategory)> {
+        self.widgets.keys().cloned().collect()
+    }
+
+    async fn get_widget(&self, keyword: WidgetKeyword, category: WidgetCategory) -> Result<String> {
+        let widget = self
+            .widgets
+            .get(&(keyword.clone(), category))
+            .ok_or_else(|| {
+                Error::Params(format!(
+                    "No widget for category {category:?} and keyword {keyword:?}"
+                ))
+            })?;
+        let end_url = match category {
+            WidgetCategory::Timeseries => "api/widgetdata/multiline",
+            WidgetCategory::GeoMap => "api/widgetdata/comparedgeo",
+            WidgetCategory::RelatedTopics => "api/widgetdata/relatedsearches",
+            WidgetCategory::RelatedQueries => "api/widgetdata/relatedsearches",
         };
         self.trends_client
             .get(
                 end_url,
                 &serde_json::to_string(&widget.request)?,
                 Some(&widget.token),
-        ).await
+            )
+            .await
     }
 
-    pub async fn get_timeseries_as_json(&self) -> Result<serde_json::Value> {
-        let timeseries = self.get_widget(WidgetId::Timeseries).await?;
-        serde_json::from_str(timeseries.as_str()).map_err(Error::from)
-    }
-
-    pub async fn get_geo_map_as_json(&self) -> Result<serde_json::Value> {
-        let geo_map = self.get_widget(WidgetId::GeoMap).await?;
-        serde_json::from_str(geo_map.as_str()).map_err(Error::from)
-    }
-
-    pub async fn get_related_topics_as_json(&self) -> Result<serde_json::Value> {
-        let related_topics = self.get_widget(WidgetId::RelatedTopics).await?;
-        serde_json::from_str(related_topics.as_str()).map_err(Error::from)
-    }
-
-    pub async fn get_related_queries_as_json(&self) -> Result<serde_json::Value> {
-        let related_queries = self.get_widget(WidgetId::RelatedQueries).await?;
-        serde_json::from_str(related_queries.as_str()).map_err(Error::from)
+    pub async fn get_widget_as_json(
+        &self,
+        keyword: WidgetKeyword,
+        category: WidgetCategory,
+    ) -> Result<serde_json::Value> {
+        let widget = self.get_widget(keyword, category).await?;
+        let cleaned_widget = sanitize_google_json(&widget);
+        serde_json::from_str(cleaned_widget).map_err(Error::from)
     }
 }
-
