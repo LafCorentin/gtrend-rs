@@ -77,4 +77,3 @@ pub enum Lang {
     #[serde(rename = "zh-TW")]
     ZH_TW,
 }
-

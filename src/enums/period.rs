@@ -1,7 +1,7 @@
 //! Represent period predefined by Google Trend.   
 
-use serde::Serialize;
 use chrono::{DateTime, Utc};
+use serde::Serialize;
 
 #[derive(Debug, Clone)]
 pub struct Date(String);
@@ -29,18 +29,20 @@ pub enum Period {
 }
 
 impl Serialize for Period {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
         match self {
             Period::Dates(d1, d2) => serializer.serialize_str(&format!("{} {}", d1.0, d2.0)),
             Period::DatesHour(d1, d2) => serializer.serialize_str(&format!("{} {}", d1.0, d2.0)),
-            Period::Predefined(p) => p.serialize(serializer)
+            Period::Predefined(p) => p.serialize(serializer),
         }
     }
 }
 
 #[derive(Debug, Serialize, Clone, Copy)]
 pub enum PredefinedPeriod {
-
     #[serde(rename = "now 1-H")]
     OneHour,
 
@@ -79,7 +81,10 @@ mod tests {
         let date = Date::new(&now);
         let period = Period::Dates(date.clone(), date.clone());
 
-        assert_eq!(serde_json::to_string(&period).unwrap(), now.format("\"%Y-%m-%d %Y-%m-%d\"").to_string());
+        assert_eq!(
+            serde_json::to_string(&period).unwrap(),
+            now.format("\"%Y-%m-%d %Y-%m-%d\"").to_string()
+        );
     }
 
     #[test]
@@ -88,6 +93,9 @@ mod tests {
         let date = DateHour::new(&now);
         let period = Period::DatesHour(date.clone(), date.clone());
 
-        assert_eq!(serde_json::to_string(&period).unwrap(), now.format("\"%Y-%m-%dT%H %Y-%m-%dT%H\"").to_string());
+        assert_eq!(
+            serde_json::to_string(&period).unwrap(),
+            now.format("\"%Y-%m-%dT%H %Y-%m-%dT%H\"").to_string()
+        );
     }
 }

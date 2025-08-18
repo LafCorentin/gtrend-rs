@@ -1,6 +1,5 @@
 //! Represent Google Trend Country.   
 
-
 use serde::Serialize;
 use strum_macros::Display;
 

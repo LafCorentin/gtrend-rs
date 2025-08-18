@@ -12,13 +12,11 @@ use tokio::{fs::File, io::AsyncWriteExt as _};
 #[tokio::test]
 async fn global() {
     let simple_request = Request::new(
-        vec![
-            ComparaisonElem {
-                keyword: "google".to_string(),
-                geo: Country::US,
-                time: Period::Predefined(PredefinedPeriod::OneYear),
-            },
-        ],
+        vec![ComparaisonElem {
+            keyword: "google".to_string(),
+            geo: Country::US,
+            time: Period::Predefined(PredefinedPeriod::OneYear),
+        }],
         Category::All,
         Property::Web,
     )
@@ -35,6 +33,24 @@ async fn global() {
                 keyword: "find".to_string(),
                 geo: Country::US,
                 time: Period::Predefined(PredefinedPeriod::OneDay),
+            },
+        ],
+        Category::All,
+        Property::Web,
+    )
+    .unwrap();
+
+    let request_diff_geo = Request::new(
+        vec![
+            ComparaisonElem {
+                keyword: "google".to_string(),
+                geo: Country::US,
+                time: Period::Predefined(PredefinedPeriod::OneYear),
+            },
+            ComparaisonElem {
+                keyword: "find".to_string(),
+                geo: Country::FR,
+                time: Period::Predefined(PredefinedPeriod::OneYear),
             },
         ],
         Category::All,
@@ -69,9 +85,9 @@ async fn global() {
 
     test_request(simple_request, client.clone()).await;
     test_request(request_diff_dates, client.clone()).await;
+    test_request(request_diff_geo, client.clone()).await;
     test_request(triple_request, client).await;
 }
-
 
 async fn test_request(request: Request, client: TrendsClient) {
     let res = client.explore(request).await.unwrap();
@@ -87,19 +103,22 @@ async fn test_request(request: Request, client: TrendsClient) {
             .await
             .unwrap();
 
-        let data = res.get_widget_as_json(keyword.clone(), category).await.unwrap();
+        let data = res
+            .get_widget_as_json(keyword.clone(), category)
+            .await
+            .unwrap();
 
         file.write_all(data.to_string().as_bytes()).await.unwrap();
 
         match category {
             gtrend_rs::trends_client::WidgetCategory::Timeseries => {
                 res.get_timeseries(keyword).await.unwrap();
-            },
+            }
             gtrend_rs::trends_client::WidgetCategory::GeoMap => {
                 res.get_geomap(keyword).await.unwrap();
-            },
-            gtrend_rs::trends_client::WidgetCategory::RelatedTopics => {},
-            gtrend_rs::trends_client::WidgetCategory::RelatedQueries => {},
+            }
+            gtrend_rs::trends_client::WidgetCategory::RelatedTopics => {}
+            gtrend_rs::trends_client::WidgetCategory::RelatedQueries => {}
         }
     }
 }

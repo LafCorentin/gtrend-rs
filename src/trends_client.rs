@@ -1,6 +1,6 @@
 mod explore_client;
-mod timeseries;
 mod geo_map;
+mod timeseries;
 
 use quick_xml::{Reader, events::Event};
 use reqwest::{

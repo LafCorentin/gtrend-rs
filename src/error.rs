@@ -1,4 +1,3 @@
-
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Params error: {0}")]

@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::{
     error::{Error, Result},
-    trends_client::{geo_map::GeoMap, sanitize_google_json, timeseries::Timeseries, TrendsClient},
+    trends_client::{TrendsClient, geo_map::GeoMap, sanitize_google_json, timeseries::Timeseries},
 };
 
 #[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
@@ -83,7 +83,7 @@ impl ExploreClient {
                             Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
                         })?;
 
-                    if id == "backends_note" {
+                    if id.contains("_note") {
                         continue;
                     }
 
@@ -93,7 +93,7 @@ impl ExploreClient {
                         (keyword.clone(), category),
                         serde_json::from_value(widget.clone())?,
                     );
-                },
+                }
                 "fe_explore" => {
                     keyword = WidgetKeyword::Keyword(
                         widget
@@ -111,7 +111,7 @@ impl ExploreClient {
                             })?
                             .to_string(),
                     );
-                },
+                }
                 _ => {
                     return Err(Error::UnexpectedResponse(format!(
                         "Irregular widget: {widget}"
