@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::{
     error::{Error, Result},
-    trends_client::{sanitize_google_json, TrendsClient},
+    trends_client::{TrendsClient, sanitize_google_json, timeseries::Timeseries},
 };
 
 #[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
@@ -73,23 +73,27 @@ impl ExploreClient {
                 .ok_or_else(|| Error::UnexpectedResponse(format!("Irregular widget: {widget}")))?
             {
                 "fe" => {
-                    let category = WidgetCategory::try_from(
-                        widget
-                            .get("id")
-                            .ok_or_else(|| {
-                                Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
-                            })?
-                            .as_str()
-                            .ok_or_else(|| {
-                                Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
-                            })?,
-                    )?;
+                    let id = widget
+                        .get("id")
+                        .ok_or_else(|| {
+                            Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
+                        })?
+                        .as_str()
+                        .ok_or_else(|| {
+                            Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
+                        })?;
+
+                    if id == "backends_note" {
+                        continue;
+                    }
+
+                    let category = WidgetCategory::try_from(id)?;
 
                     widgets.insert(
                         (keyword.clone(), category),
                         serde_json::from_value(widget.clone())?,
                     );
-                }
+                },
                 "fe_explore" => {
                     keyword = WidgetKeyword::Keyword(
                         widget
@@ -107,7 +111,7 @@ impl ExploreClient {
                             })?
                             .to_string(),
                     );
-                }
+                },
                 _ => {
                     return Err(Error::UnexpectedResponse(format!(
                         "Irregular widget: {widget}"
@@ -158,5 +162,10 @@ impl ExploreClient {
         let widget = self.get_widget(keyword, category).await?;
         let cleaned_widget = sanitize_google_json(&widget);
         serde_json::from_str(cleaned_widget).map_err(Error::from)
+    }
+
+    pub async fn get_timeseries(&self, keyword: WidgetKeyword) -> Result<Timeseries> {
+        let content = self.get_widget(keyword, WidgetCategory::Timeseries).await?;
+        serde_json::from_str(sanitize_google_json(&content)).map_err(Error::from)
     }
 }

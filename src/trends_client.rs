@@ -1,6 +1,5 @@
 mod explore_client;
-
-use std::sync::Arc;
+mod timeseries;
 
 use quick_xml::{Reader, events::Event};
 use reqwest::{
@@ -9,11 +8,14 @@ use reqwest::{
     header::{ACCEPT_LANGUAGE, HeaderMap, HeaderValue, USER_AGENT},
 };
 use serde::Serialize;
+use std::sync::Arc;
 
-use crate::{
+use crate::error::{Error, Result};
+
+pub use crate::{
     enums::{category::Category, country::Country, lang::Lang, period::Period, property::Property},
-    error::{Error, Result},
-    trends_client::explore_client::{ExploreClient, ExploreResult},
+    trends_client::explore_client::{ExploreClient, ExploreResult, WidgetCategory, WidgetKeyword},
+    trends_client::timeseries::Timeseries,
 };
 
 const DEFAULT_ADDRESS: &str = "https://trends.google.com/trends";
@@ -96,7 +98,7 @@ impl TrendsClient {
         let json_body = sanitize_google_json(&json_body_unsanitize);
 
         let try_explore_result: Result<ExploreResult> =
-            serde_json::from_str(json_body).map_err(|e| e.into());
+            serde_json::from_str(json_body).map_err(Error::from);
 
         match try_explore_result {
             Ok(explore_result) => Ok(ExploreClient::new(self.clone(), explore_result)?),
@@ -133,6 +135,8 @@ fn response_problem(result: &str) -> Error {
     Error::UnexpectedResponse(format!("Seems not to be xml: {result}"))
 }
 
+/// Google API returns json preceded by obstructing symbols
+/// This function removes them
 fn sanitize_google_json(raw: &str) -> &str {
     match raw.find(['{', '[']) {
         Some(pos) => &raw[pos..],
@@ -179,56 +183,8 @@ pub struct ComparaisonElem {
 
 #[cfg(test)]
 mod tests {
-    use tokio::{fs::File, io::AsyncWriteExt};
-
-    use crate::enums::period::PredefinedPeriod;
 
     use super::*;
-
-    #[tokio::test]
-    async fn test_request() {
-        let request = Request::new(
-            vec![
-                ComparaisonElem {
-                    keyword: "test".to_string(),
-                    geo: Country::US,
-                    time: Period::Predefined(PredefinedPeriod::OneYear),
-                },
-                ComparaisonElem {
-                    keyword: "google".to_string(),
-                    geo: Country::US,
-                    time: Period::Predefined(PredefinedPeriod::OneYear),
-                },
-                ComparaisonElem {
-                    keyword: "find".to_string(),
-                    geo: Country::US,
-                    time: Period::Predefined(PredefinedPeriod::OneYear),
-                },
-            ],
-            Category::All,
-            Property::Web,
-        )
-        .unwrap();
-
-        let client = TrendsClient::new(TrendsEndpoint::Default).await.unwrap();
-        let res = client.explore(request).await.unwrap();
-
-        for (keyword, cat) in res.available_widgets() {
-            let keyword_name = match keyword.clone() {
-                explore_client::WidgetKeyword::All => "ALL".to_string(),
-                explore_client::WidgetKeyword::Keyword(s) => s,
-            };
-            println!("jsons/{keyword_name}_{cat:?}.json");
-
-            let mut file = File::create(format!("jsons/{keyword_name}_{cat:?}.json"))
-                .await
-                .unwrap();
-
-            let data = res.get_widget_as_json(keyword.clone(), cat).await.unwrap();
-
-            file.write_all(data.to_string().as_bytes()).await.unwrap();
-        }
-    }
 
     #[tokio::test]
     async fn reponse_problem() {
@@ -239,5 +195,14 @@ mod tests {
         let err = response_problem(result);
 
         assert_eq!(err, Error::api_error("Error 400 (Bad Request)!!1"));
+    }
+
+    #[test]
+    fn sanitize_google_json_test() {
+        assert_eq!(
+            sanitize_google_json(")}]\n{'a': 1, 'b': 2}"),
+            "{'a': 1, 'b': 2}"
+        );
+        assert_eq!(sanitize_google_json(")}]\n[ 1, 2]"), "[ 1, 2]");
     }
 }
