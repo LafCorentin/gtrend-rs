@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::{
     error::{Error, Result},
-    trends_client::{TrendsClient, sanitize_google_json, timeseries::Timeseries},
+    trends_client::{geo_map::GeoMap, sanitize_google_json, timeseries::Timeseries, TrendsClient},
 };
 
 #[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
@@ -166,6 +166,11 @@ impl ExploreClient {
 
     pub async fn get_timeseries(&self, keyword: WidgetKeyword) -> Result<Timeseries> {
         let content = self.get_widget(keyword, WidgetCategory::Timeseries).await?;
+        serde_json::from_str(sanitize_google_json(&content)).map_err(Error::from)
+    }
+
+    pub async fn get_geomap(&self, keyword: WidgetKeyword) -> Result<GeoMap> {
+        let content = self.get_widget(keyword, WidgetCategory::GeoMap).await?;
         serde_json::from_str(sanitize_google_json(&content)).map_err(Error::from)
     }
 }

@@ -95,7 +95,9 @@ async fn test_request(request: Request, client: TrendsClient) {
             gtrend_rs::trends_client::WidgetCategory::Timeseries => {
                 res.get_timeseries(keyword).await.unwrap();
             },
-            gtrend_rs::trends_client::WidgetCategory::GeoMap => {},
+            gtrend_rs::trends_client::WidgetCategory::GeoMap => {
+                res.get_geomap(keyword).await.unwrap();
+            },
             gtrend_rs::trends_client::WidgetCategory::RelatedTopics => {},
             gtrend_rs::trends_client::WidgetCategory::RelatedQueries => {},
         }
