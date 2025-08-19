@@ -1,5 +1,7 @@
 mod explore_client;
 mod geo_map;
+mod related_queries;
+mod related_topics;
 mod timeseries;
 
 use quick_xml::{Reader, events::Event};
@@ -17,9 +19,12 @@ pub use crate::{
     enums::{category::Category, country::Country, lang::Lang, period::Period, property::Property},
     trends_client::explore_client::{ExploreClient, ExploreResult, WidgetCategory, WidgetKeyword},
     trends_client::timeseries::Timeseries,
+    trends_client::geo_map::GeoMap,
+    trends_client::related_queries::RelatedQueries,
+    trends_client::related_topics::RelatedTopics,
 };
 
-const DEFAULT_ADDRESS: &str = "https://trends.google.com/trends";
+const DEFAULT_ADDRESS: &str = "https://trends.google.com";
 
 pub enum TrendsEndpoint {
     Default,
@@ -55,7 +60,7 @@ impl TrendsClient {
 
         // Setting up cookies
         client
-            .get("https://trends.google.com/trends/")
+            .get(format!("{}/trends", DEFAULT_ADDRESS))
             .send()
             .await?;
 
@@ -91,7 +96,7 @@ impl TrendsClient {
     pub async fn explore(&self, request: Request) -> Result<ExploreClient> {
         let json_body_unsanitize = self
             .get(
-                "api/explore",
+                "trends/api/explore",
                 serde_json::to_string(&request)?.as_str(),
                 None,
             )

@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::{
     error::{Error, Result},
-    trends_client::{TrendsClient, geo_map::GeoMap, sanitize_google_json, timeseries::Timeseries},
+    trends_client::{geo_map::GeoMap, sanitize_google_json, timeseries::Timeseries, RelatedQueries, TrendsClient},
 };
 
 #[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
@@ -140,10 +140,10 @@ impl ExploreClient {
                 ))
             })?;
         let end_url = match category {
-            WidgetCategory::Timeseries => "api/widgetdata/multiline",
-            WidgetCategory::GeoMap => "api/widgetdata/comparedgeo",
-            WidgetCategory::RelatedTopics => "api/widgetdata/relatedsearches",
-            WidgetCategory::RelatedQueries => "api/widgetdata/relatedsearches",
+            WidgetCategory::Timeseries => "trends/api/widgetdata/multiline",
+            WidgetCategory::GeoMap => "trends/api/widgetdata/comparedgeo",
+            WidgetCategory::RelatedTopics => "trends/api/widgetdata/relatedsearches",
+            WidgetCategory::RelatedQueries => "trends/api/widgetdata/relatedsearches",
         };
         self.trends_client
             .get(
@@ -171,6 +171,13 @@ impl ExploreClient {
 
     pub async fn get_geomap(&self, keyword: WidgetKeyword) -> Result<GeoMap> {
         let content = self.get_widget(keyword, WidgetCategory::GeoMap).await?;
+        serde_json::from_str(sanitize_google_json(&content)).map_err(Error::from)
+    }
+
+    pub async fn get_related_queries(&self, keyword: WidgetKeyword) -> Result<RelatedQueries> {
+        let content = self
+            .get_widget(keyword, WidgetCategory::RelatedQueries)
+            .await?;
         serde_json::from_str(sanitize_google_json(&content)).map_err(Error::from)
     }
 }

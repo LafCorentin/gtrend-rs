@@ -93,22 +93,11 @@ async fn test_request(request: Request, client: TrendsClient) {
     let res = client.explore(request).await.unwrap();
 
     for (keyword, category) in res.available_widgets() {
-        let keyword_name = match keyword.clone() {
-            WidgetKeyword::All => "ALL".to_string(),
-            WidgetKeyword::Keyword(s) => s,
-        };
-        println!("jsons/{keyword_name}_{category:?}.json");
 
-        let mut file = File::create(format!("jsons/{keyword_name}_{category:?}.json"))
-            .await
-            .unwrap();
-
-        let data = res
+        let _ = res
             .get_widget_as_json(keyword.clone(), category)
             .await
             .unwrap();
-
-        file.write_all(data.to_string().as_bytes()).await.unwrap();
 
         match category {
             gtrend_rs::trends_client::WidgetCategory::Timeseries => {
@@ -118,7 +107,9 @@ async fn test_request(request: Request, client: TrendsClient) {
                 res.get_geomap(keyword).await.unwrap();
             }
             gtrend_rs::trends_client::WidgetCategory::RelatedTopics => {}
-            gtrend_rs::trends_client::WidgetCategory::RelatedQueries => {}
+            gtrend_rs::trends_client::WidgetCategory::RelatedQueries => {
+                res.get_related_queries(keyword).await.unwrap();
+            }
         }
     }
 }
