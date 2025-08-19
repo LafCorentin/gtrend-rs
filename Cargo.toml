@@ -2,6 +2,12 @@
 name = "gtrend-rs"
 version = "0.1.0"
 edition = "2024"
+authors = ["LafCorentin"]
+description = "Unofficial client for interacting with Google Trend API"
+repository = "https://https://github.com/LafCorentin/gtrend-rs"
+license = "Apache-2.0"
+keywords = ["google_trend", "trend", "google", "api", "web"]
+categories = ["api-bindings"]
 
 [dependencies]
 chrono = "0.4.41"
@@ -14,3 +20,6 @@ strum = "0.27.2"
 strum_macros = "0.27.2"
 thiserror = "2.0.14"
 tokio = { version = "1.47.1", features = ["full"] }
+
+[profile.release]
+lto = true
