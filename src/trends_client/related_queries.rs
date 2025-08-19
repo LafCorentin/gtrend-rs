@@ -1,7 +1,6 @@
 use derive_getters::Getters;
 use serde::Deserialize;
 
-
 #[derive(Debug, Deserialize, Getters, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RelatedQueries {
@@ -11,13 +10,13 @@ pub struct RelatedQueries {
 #[derive(Debug, Deserialize, Getters, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DefaultRelatedQueries {
-    ranked_list: Vec<RankedKeyword>
+    ranked_list: Vec<RankedKeyword>,
 }
 
 #[derive(Debug, Deserialize, Getters, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RankedKeyword {
-    ranked_keyword: Vec<RelatedKeyword>
+    ranked_keyword: Vec<RelatedKeyword>,
 }
 
 #[derive(Debug, Deserialize, Getters, Clone)]

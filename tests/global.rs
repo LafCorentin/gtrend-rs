@@ -5,9 +5,8 @@ use gtrend_rs::{
         period::{Period, PredefinedPeriod},
         property::Property,
     },
-    trends_client::{ComparaisonElem, Request, TrendsClient, TrendsEndpoint, WidgetKeyword},
+    trends_client::{ComparaisonElem, Request, TrendsClient, TrendsEndpoint},
 };
-use tokio::{fs::File, io::AsyncWriteExt as _};
 
 #[tokio::test]
 async fn global() {
@@ -93,7 +92,6 @@ async fn test_request(request: Request, client: TrendsClient) {
     let res = client.explore(request).await.unwrap();
 
     for (keyword, category) in res.available_widgets() {
-
         let _ = res
             .get_widget_as_json(keyword.clone(), category)
             .await

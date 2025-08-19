@@ -18,10 +18,10 @@ use crate::error::{Error, Result};
 pub use crate::{
     enums::{category::Category, country::Country, lang::Lang, period::Period, property::Property},
     trends_client::explore_client::{ExploreClient, ExploreResult, WidgetCategory, WidgetKeyword},
-    trends_client::timeseries::Timeseries,
     trends_client::geo_map::GeoMap,
     trends_client::related_queries::RelatedQueries,
     trends_client::related_topics::RelatedTopics,
+    trends_client::timeseries::Timeseries,
 };
 
 const DEFAULT_ADDRESS: &str = "https://trends.google.com";

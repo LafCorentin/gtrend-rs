@@ -4,7 +4,9 @@ use serde::Deserialize;
 
 use crate::{
     error::{Error, Result},
-    trends_client::{geo_map::GeoMap, sanitize_google_json, timeseries::Timeseries, RelatedQueries, TrendsClient},
+    trends_client::{
+        RelatedQueries, TrendsClient, geo_map::GeoMap, sanitize_google_json, timeseries::Timeseries,
+    },
 };
 
 #[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
