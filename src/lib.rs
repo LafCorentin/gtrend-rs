@@ -1,3 +1,9 @@
 pub mod enums;
-pub mod error;
-pub mod trends_client;
+mod error;
+mod trends_client;
+
+pub use error::Error;
+pub use trends_client::{
+    ComparaisonElem, DEFAULT_ADDRESS, ExploreClient, ExploreResult, GeoMap, RelatedQueries,
+    RelatedTopics, Request, Timeseries, TrendsClient, WidgetCategory, WidgetKeyword,
+};

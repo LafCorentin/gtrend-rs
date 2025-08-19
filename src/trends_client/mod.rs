@@ -13,23 +13,18 @@ use reqwest::{
 use serde::Serialize;
 use std::sync::Arc;
 
+use crate::enums::{Category, Country, Lang, Period, Property};
 use crate::error::{Error, Result};
 
-pub use crate::{
-    enums::{category::Category, country::Country, lang::Lang, period::Period, property::Property},
-    trends_client::explore_client::{ExploreClient, ExploreResult, WidgetCategory, WidgetKeyword},
-    trends_client::geo_map::GeoMap,
-    trends_client::related_queries::RelatedQueries,
-    trends_client::related_topics::RelatedTopics,
-    trends_client::timeseries::Timeseries,
+pub use crate::trends_client::{
+    explore_client::{ExploreClient, ExploreResult, WidgetCategory, WidgetKeyword},
+    geo_map::GeoMap,
+    related_queries::RelatedQueries,
+    related_topics::RelatedTopics,
+    timeseries::Timeseries,
 };
 
-const DEFAULT_ADDRESS: &str = "https://trends.google.com";
-
-pub enum TrendsEndpoint {
-    Default,
-    Custom(String),
-}
+pub const DEFAULT_ADDRESS: &str = "https://trends.google.com";
 
 #[derive(Debug, Clone)]
 pub struct TrendsClient {
@@ -40,7 +35,7 @@ pub struct TrendsClient {
 }
 
 impl TrendsClient {
-    pub async fn new(endpoint: TrendsEndpoint) -> Result<Self> {
+    pub async fn new(endpoint: String, lang: Lang, country: Country) -> Result<Self> {
         // Camouflage headers
         let mut headers = HeaderMap::new();
         headers.insert(
@@ -65,14 +60,15 @@ impl TrendsClient {
             .await?;
 
         Ok(Self {
-            endpoint: match endpoint {
-                TrendsEndpoint::Default => DEFAULT_ADDRESS.to_string(),
-                TrendsEndpoint::Custom(endpoint) => endpoint,
-            },
+            endpoint,
             client,
-            lang: Lang::EN,
-            country: Country::US,
+            lang,
+            country,
         })
+    }
+
+    pub async fn try_default() -> Result<Self> {
+        Self::new(DEFAULT_ADDRESS.to_string(), Lang::EN, Country::ALL).await
     }
 
     async fn get(&self, end_url: &str, req: &str, token: Option<&str>) -> Result<String> {
@@ -138,7 +134,11 @@ fn response_problem(result: &str) -> Error {
         buf.clear();
     }
 
-    Error::UnexpectedResponse(format!("Seems not to be xml: {result}"))
+    if result.contains("Our systems have detected unusual traffic from your computer") {
+        return Error::api_error("API rate limit exceeded");
+    }
+
+    Error::UnexpectedResponse(format!("Unexpected response: {result}"))
 }
 
 /// Google API returns json preceded by obstructing symbols
@@ -193,7 +193,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn reponse_problem() {
+    async fn reponse_xml_problem() {
         let result = "<meta charset= utf-8>
 <meta name= viewport content=\"initial-scale=1, minimum-scale=1, width=device-width\">
 <title>Error 400 (Bad Request)!!1</title>";
@@ -201,6 +201,45 @@ mod tests {
         let err = response_problem(result);
 
         assert_eq!(err, Error::api_error("Error 400 (Bad Request)!!1"));
+    }
+
+    #[tokio::test]
+    async fn response_too_many_requests_problem() {
+        let result = "{e.focus();} if(solveSimpleChallenge) {solveSimpleChallenge(0,0);}\">\n<div
+    style=\"max-width:400px;\">\n
+    <hr noshade size=\"1\" style=\"color:#ccc; background-color:#ccc;\"><br>\n<form id=\"captcha-form\" action=\"index\"
+        method=\"post\">\n<noscript>\n<div style=\"font-size:13px;\">\n In order to continue, please enable javascript
+                on your web browser.\n</div>\n</noscript>\n
+        <script src=\"https://www.google.com/recaptcha/enterprise.js\" async defer></script>\n
+        <script>var submitCallback = function (response) { document.getElementById('captcha-form').submit(); };</script>\n
+        <div id=\"recaptcha\" class=\"g-recaptcha\" data-sitekey=\"6LfwuyUTAAAAAOAmoS0fdqijC2PbbdH4kjq62Y1b\"
+            data-callback=\"submitCallback\"
+            data-s=\"SHORTED\">
+        </div>\n\n<input type='hidden' name='q'
+            value='SHORTED'><input
+            type=\"hidden\" name=\"continue\"
+            value=\"https://trends.google.com/trends/SHORTED\">\n
+    </form>\n
+    <hr noshade size=\"1\" style=\"color:#ccc; background-color:#ccc;\">\n\n<div style=\"font-size:13px; line-break:
+        anywhere;\">\n<b>About this page</b><br><br>\n\nOur systems have detected unusual traffic from your computer
+        network. This page checks to see if it&#39;s really you sending the requests, and not a robot. <a href=\"#\"
+            onclick=\"document.getElementById('infoDiv').style.display='block' ;\">Why did this happen?</a><br><br>\n\n
+        <div id=\"infoDiv\" style=\"display:none; background-color:#eee; padding:10px; margin:0 0 15px 0;
+            line-height:1.4em;\">\nThis page appears when Google automatically detects requests coming from your
+            computer network which appear to be in violation of the <a href=\"//www.google.com/policies/terms/\">Terms
+                of Service</a>. The block will expire shortly after those requests stop. In the meantime, solving the
+            above CAPTCHA will let you continue to use our services.<br><br>This traffic may have been sent by malicious
+            software, a browser plug-in, or a script that sends automated requests. If you share your network
+            connection, ask your administrator for help &mdash; a different computer using the same IP address may be
+            responsible. <a href=\"//support.google.com/websearch/answer/86640\">Learn more</a><br><br>Sometimes you may
+            be asked to solve the CAPTCHA if you are using advanced terms that robots are known to use, or sending
+            requests very quickly.\n</div>\n\nIP address: 2a02:8434:ff02:3201:f820:6062:ea14:bbdd</div>\n
+</div>\n</body>\n
+
+</html>";
+        let err = response_problem(result);
+
+        assert_eq!(err, Error::api_error("API rate limit exceeded"));
     }
 
     #[test]
