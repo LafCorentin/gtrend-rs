@@ -1,8 +1,9 @@
-//! Represent all langage supported by google.   
+//! Enum to represent all langage supported by google.   
 
 use serde::Serialize;
 use strum_macros::Display;
 
+/// Represent all languages supported by google.
 #[derive(Debug, Display, Serialize, Clone, Copy)]
 #[strum(serialize_all = "kebab_case")]
 pub enum Lang {

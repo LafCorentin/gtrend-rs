@@ -1,18 +1,21 @@
 use derive_getters::Getters;
 use serde::Deserialize;
 
+/// Google trend GeoMap Widget
 #[derive(Debug, Deserialize, Getters, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GeoMap {
     default: DefaultGeoMap,
 }
 
+/// Subpart of Google trend [`GeoMap`]
 #[derive(Debug, Deserialize, Getters, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DefaultGeoMap {
     geo_map_data: Vec<GeoMapItem>,
 }
 
+/// Subpart of Google trend [`GeoMap`]
 #[derive(Debug, Deserialize, Getters, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GeoMapItem {

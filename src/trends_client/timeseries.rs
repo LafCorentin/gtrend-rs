@@ -1,12 +1,14 @@
 use derive_getters::Getters;
 use serde::Deserialize;
 
+/// Google trend timeseries widget
 #[derive(Debug, Deserialize, Getters, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Timeseries {
     default: DefaultTimeSeries,
 }
 
+/// Subpart of Google trend [`Timeseries`]
 #[derive(Debug, Deserialize, Getters, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DefaultTimeSeries {
@@ -14,6 +16,7 @@ pub struct DefaultTimeSeries {
     timeline_data: Vec<TimeLineBit>,
 }
 
+/// Subpart of Google trend [`Timeseries`]
 #[derive(Debug, Deserialize, Getters, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeLineBit {

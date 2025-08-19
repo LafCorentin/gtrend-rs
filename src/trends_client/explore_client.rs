@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+//! This module is responsible for fetching widgets from Google Trends.
 
 use serde::Deserialize;
+use std::collections::HashMap;
 
 use crate::{
     error::{Error, Result},
@@ -9,6 +10,7 @@ use crate::{
     },
 };
 
+/// Google trend Widget categories
 #[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum WidgetCategory {
@@ -38,9 +40,13 @@ impl TryFrom<&str> for WidgetCategory {
     type Error = Error;
 }
 
+/// Google trend Widget keywords
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, Hash)]
 pub enum WidgetKeyword {
+    /// Main keyword if only one is given, otherwise all keywords
     All,
+
+    /// Specific keyword when given multiple in the request
     Keyword(String),
 }
 
@@ -51,11 +57,12 @@ pub struct Widget {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ExploreResult {
+pub(crate) struct ExploreResult {
     widgets: Vec<serde_json::Value>,
     //skipping many items here
 }
 
+/// Client meant to fetch widgets from Google Trends
 #[derive(Debug)]
 pub struct ExploreClient {
     trends_client: TrendsClient,
@@ -63,7 +70,7 @@ pub struct ExploreClient {
 }
 
 impl ExploreClient {
-    pub fn new(trends_client: TrendsClient, explore_result: ExploreResult) -> Result<Self> {
+    pub(crate) fn new(trends_client: TrendsClient, explore_result: ExploreResult) -> Result<Self> {
         let mut widgets = HashMap::new();
         let mut keyword = WidgetKeyword::All;
 
@@ -128,6 +135,7 @@ impl ExploreClient {
         })
     }
 
+    /// Returns all available widgets
     pub fn available_widgets(&self) -> Vec<(WidgetKeyword, WidgetCategory)> {
         self.widgets.keys().cloned().collect()
     }
@@ -156,6 +164,7 @@ impl ExploreClient {
             .await
     }
 
+    /// Returns the widget as a JSON object
     pub async fn get_widget_as_json(
         &self,
         keyword: WidgetKeyword,
@@ -166,16 +175,19 @@ impl ExploreClient {
         serde_json::from_str(cleaned_widget).map_err(Error::from)
     }
 
+    /// Returns the timeseries as a [`Timeseries`] object
     pub async fn get_timeseries(&self, keyword: WidgetKeyword) -> Result<Timeseries> {
         let content = self.get_widget(keyword, WidgetCategory::Timeseries).await?;
         serde_json::from_str(sanitize_google_json(&content)).map_err(Error::from)
     }
 
+    /// Returns the geomap as a [`GeoMap`] object
     pub async fn get_geomap(&self, keyword: WidgetKeyword) -> Result<GeoMap> {
         let content = self.get_widget(keyword, WidgetCategory::GeoMap).await?;
         serde_json::from_str(sanitize_google_json(&content)).map_err(Error::from)
     }
 
+    /// Returns the related queries as a [`RelatedQueries`] object
     pub async fn get_related_queries(&self, keyword: WidgetKeyword) -> Result<RelatedQueries> {
         let content = self
             .get_widget(keyword, WidgetCategory::RelatedQueries)

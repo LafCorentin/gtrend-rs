@@ -13,19 +13,24 @@ use reqwest::{
 use serde::Serialize;
 use std::sync::Arc;
 
-use crate::enums::{Category, Country, Lang, Period, Property};
 use crate::error::{Error, Result};
+use crate::{
+    enums::{Category, Country, Lang, Period, Property},
+    trends_client::explore_client::ExploreResult,
+};
 
 pub use crate::trends_client::{
-    explore_client::{ExploreClient, ExploreResult, WidgetCategory, WidgetKeyword},
+    explore_client::{ExploreClient, WidgetCategory, WidgetKeyword},
     geo_map::GeoMap,
     related_queries::RelatedQueries,
     related_topics::RelatedTopics,
     timeseries::Timeseries,
 };
 
+/// Default Google Trends address
 pub const DEFAULT_ADDRESS: &str = "https://trends.google.com";
 
+/// Google Trends client
 #[derive(Debug, Clone)]
 pub struct TrendsClient {
     endpoint: String,
@@ -150,6 +155,7 @@ fn sanitize_google_json(raw: &str) -> &str {
     }
 }
 
+/// Google Trend request
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Request {
@@ -180,6 +186,7 @@ impl Request {
     }
 }
 
+/// Google Trend comparaison item
 #[derive(Debug, Serialize)]
 pub struct ComparaisonElem {
     pub keyword: String,

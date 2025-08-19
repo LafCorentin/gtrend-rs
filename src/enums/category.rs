@@ -1,7 +1,8 @@
-//! Represent Google Trend Categories.
+//! Enum to represent Google Trend Categories.
 
 use serde::Serialize;
 
+/// Represent Google Trend Categories.
 #[derive(Debug, Serialize, Clone, Copy)]
 pub enum Category {
     #[serde(rename = "642")]

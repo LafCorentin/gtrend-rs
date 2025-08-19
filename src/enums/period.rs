@@ -3,6 +3,7 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
+/// Simplified date field
 #[derive(Debug, Clone)]
 pub struct Date(String);
 
@@ -12,6 +13,7 @@ impl Date {
     }
 }
 
+/// Simplified date with hour field
 #[derive(Debug, Clone)]
 pub struct DateHour(String);
 
@@ -21,6 +23,7 @@ impl DateHour {
     }
 }
 
+/// Google Trend period of time
 #[derive(Debug, Clone)]
 pub enum Period {
     Dates(Date, Date),
@@ -41,6 +44,7 @@ impl Serialize for Period {
     }
 }
 
+/// Google Trend predefined periods
 #[derive(Debug, Serialize, Clone, Copy)]
 pub enum PredefinedPeriod {
     #[serde(rename = "now 1-H")]

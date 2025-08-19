@@ -24,5 +24,7 @@ async fn main() {
         .await
         .unwrap();
 
+    stats.default().timeline_data();
+
     println!("{:?}", stats);
 }

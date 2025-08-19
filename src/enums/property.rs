@@ -2,6 +2,7 @@
 
 use serde::Serialize;
 
+/// Represent a Google Trend Property
 #[derive(Debug, Serialize, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub enum Property {
