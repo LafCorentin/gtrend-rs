@@ -1,6 +1,6 @@
 [package]
 name = "gtrend-rs"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 authors = ["LafCorentin"]
 description = "Unofficial client for interacting with Google Trend API"
@@ -11,7 +11,6 @@ categories = ["api-bindings"]
 
 [dependencies]
 chrono = "0.4.41"
-derive-getters = "0.5.0"
 quick-xml = "0.38.1"
 reqwest = { version = "0.12.23", features = ["cookies"]}
 serde = { version = "1.0.219", features = ["derive"] }
