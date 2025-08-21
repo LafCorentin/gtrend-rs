@@ -4,7 +4,7 @@ use serde::Serialize;
 use strum_macros::Display;
 
 /// Represent all languages supported by google.
-#[derive(Debug, Display, Serialize, Clone, Copy)]
+#[derive(Debug, Display, Serialize, Clone, Copy, PartialEq, Eq, Hash)]
 #[strum(serialize_all = "kebab_case")]
 pub enum Lang {
     AF,

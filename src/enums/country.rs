@@ -4,7 +4,7 @@ use serde::Serialize;
 use strum_macros::Display;
 
 /// Represent Google Trend Country.
-#[derive(Debug, Display, Serialize, Clone, Copy)]
+#[derive(Debug, Display, Serialize, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Country {
     #[strum(serialize = "")]
     #[serde(rename = "")]

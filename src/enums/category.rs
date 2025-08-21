@@ -3,7 +3,7 @@
 use serde::Serialize;
 
 /// Represent Google Trend Categories.
-#[derive(Debug, Serialize, Clone, Copy)]
+#[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Category {
     #[serde(rename = "642")]
     ADDAndADHD,
