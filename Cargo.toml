@@ -1,6 +1,6 @@
 [package]
 name = "gtrend-rs"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 authors = ["LafCorentin"]
 description = "Unofficial client for interacting with Google Trend API"

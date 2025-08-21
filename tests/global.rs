@@ -84,27 +84,27 @@ async fn global() {
 }
 
 async fn test_request(request: Request, client: TrendsClient) {
-    let res = client.explore(request).await.unwrap();
+    let explore_client: gtrend_rs::ExploreClient = client.explore(request).await.unwrap();
 
-    for (keyword, category) in res.available_widgets() {
-        let data = res
+    for (keyword, category) in explore_client.available_widgets() {
+        let data = explore_client
             .get_widget_as_json(keyword.clone(), category)
             .await
             .unwrap();
 
         match category {
             WidgetCategory::Timeseries => {
-                res.get_timeseries(keyword).await.unwrap();
+                explore_client.get_timeseries(keyword).await.unwrap();
             }
             WidgetCategory::GeoMap => {
-                res.get_geomap(keyword).await.unwrap();
+                explore_client.get_geomap(keyword).await.unwrap();
             }
             WidgetCategory::RelatedTopics => {
                 println!("Data: {:?}", data);
                 assert_eq!(&data.to_string(), "{\"default\":{\"rankedList\":[]}}")
             }
             WidgetCategory::RelatedQueries => {
-                res.get_related_queries(keyword).await.unwrap();
+                explore_client.get_related_queries(keyword).await.unwrap();
             }
         }
     }
