@@ -1,8 +1,5 @@
 mod explore_client;
-mod geo_map;
-mod related_queries;
-mod related_topics;
-mod timeseries;
+mod widget;
 
 use quick_xml::{Reader, events::Event};
 use reqwest::{
@@ -21,10 +18,10 @@ use crate::{
 
 pub use crate::trends_client::{
     explore_client::{ExploreClient, WidgetCategory, WidgetKeyword},
-    geo_map::GeoMap,
-    related_queries::RelatedQueries,
-    related_topics::RelatedTopics,
-    timeseries::Timeseries,
+    widget::{
+        geo_map::GeoMap, related_queries::RelatedQueries, related_topics::RelatedTopics,
+        timeseries::Timeseries,
+    },
 };
 
 /// Default Google Trends address
@@ -192,6 +189,12 @@ pub struct ComparaisonElem {
     pub keyword: String,
     pub geo: Country,
     pub time: Period,
+}
+
+impl ComparaisonElem {
+    pub fn new(keyword: String, geo: Country, time: Period) -> Self {
+        Self { keyword, geo, time }
+    }
 }
 
 #[cfg(test)]

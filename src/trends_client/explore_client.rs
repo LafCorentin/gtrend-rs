@@ -5,9 +5,7 @@ use std::collections::HashMap;
 
 use crate::{
     error::{Error, Result},
-    trends_client::{
-        RelatedQueries, TrendsClient, geo_map::GeoMap, sanitize_google_json, timeseries::Timeseries,
-    },
+    trends_client::{GeoMap, RelatedQueries, Timeseries, TrendsClient, sanitize_google_json},
 };
 
 /// Google trend Widget categories

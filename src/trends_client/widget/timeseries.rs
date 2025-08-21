@@ -1,6 +1,8 @@
 use derive_getters::Getters;
 use serde::Deserialize;
 
+use super::Text;
+
 /// Google trend timeseries widget
 #[derive(Debug, Deserialize, Getters, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -20,6 +22,7 @@ pub struct DefaultTimeSeries {
 #[derive(Debug, Deserialize, Getters, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeLineBit {
+    axis_note: Option<Text>,
     formatted_axis_time: String,
     formatted_time: String,
     formatted_value: Vec<String>,
