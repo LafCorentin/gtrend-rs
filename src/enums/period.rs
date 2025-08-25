@@ -26,8 +26,14 @@ impl DateHour {
 /// Google Trend period of time
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Period {
+    /// Dates
     Dates(Date, Date),
+
+    /// Dates with specified hours.
+    /// Might fail if the delta is too big. Max seems to be 8 days at August 2025.
     DatesHour(DateHour, DateHour),
+
+    /// Google Trend predefined periods
     Predefined(PredefinedPeriod),
 }
 

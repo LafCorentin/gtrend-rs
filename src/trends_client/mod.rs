@@ -141,7 +141,7 @@ fn response_problem(result: &str, request: &Request) -> Error {
     }
 
     if result.contains("The server cannot process the request because it is malformed.") {
-        return Error::API(format!("Malformed request, asked to not retry. Request: {request:?}"));
+        return Error::API(format!("Malformed request, asked to not retry. Request: {}", serde_json::to_string(&request).unwrap()));
     }
 
     Error::UnexpectedResponse(format!("Unexpected response: {result}"))

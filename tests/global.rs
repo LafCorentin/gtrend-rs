@@ -1,6 +1,7 @@
+use chrono::{TimeZone as _, Utc};
 use gtrend_rs::{
     ComparaisonElem, Request, TrendsClient, WidgetCategory,
-    enums::{Category, Country, Period, PredefinedPeriod, Property},
+    enums::{Category, Country, Date, DateHour, Period, PredefinedPeriod, Property},
 };
 
 #[tokio::test]
@@ -9,7 +10,10 @@ async fn global() {
         vec![ComparaisonElem {
             keyword: "breath".to_string(),
             geo: Country::US,
-            time: Period::Predefined(PredefinedPeriod::OneYear),
+            time: Period::DatesHour(
+                DateHour::new(&Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap()),
+                DateHour::new(&Utc.with_ymd_and_hms(2024, 1, 8, 0, 0, 0).unwrap()),
+            ),
         }],
         Category::RespiratoryConditions,
         Property::Web,
@@ -26,7 +30,10 @@ async fn global() {
             ComparaisonElem {
                 keyword: "find".to_string(),
                 geo: Country::US,
-                time: Period::Predefined(PredefinedPeriod::OneDay),
+                time: Period::Dates(
+                    Date::new(&Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap()),
+                    Date::new(&Utc.with_ymd_and_hms(2024, 1 + 8, 1, 0, 0, 0).unwrap()),
+                ),
             },
         ],
         Category::All,
