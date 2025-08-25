@@ -140,6 +140,10 @@ fn response_problem(result: &str) -> Error {
         return Error::api_error("API rate limit exceeded");
     }
 
+    if result.contains("The server cannot process the request because it is malformed.") {
+        return Error::api_error("Malformed request, asked to not retry");
+    }
+
     Error::UnexpectedResponse(format!("Unexpected response: {result}"))
 }
 
@@ -215,41 +219,54 @@ mod tests {
 
     #[tokio::test]
     async fn response_too_many_requests_problem() {
-        let result = "{e.focus();} if(solveSimpleChallenge) {solveSimpleChallenge(0,0);}\">\n<div
-    style=\"max-width:400px;\">\n
-    <hr noshade size=\"1\" style=\"color:#ccc; background-color:#ccc;\"><br>\n<form id=\"captcha-form\" action=\"index\"
-        method=\"post\">\n<noscript>\n<div style=\"font-size:13px;\">\n In order to continue, please enable javascript
-                on your web browser.\n</div>\n</noscript>\n
-        <script src=\"https://www.google.com/recaptcha/enterprise.js\" async defer></script>\n
-        <script>var submitCallback = function (response) { document.getElementById('captcha-form').submit(); };</script>\n
-        <div id=\"recaptcha\" class=\"g-recaptcha\" data-sitekey=\"6LfwuyUTAAAAAOAmoS0fdqijC2PbbdH4kjq62Y1b\"
-            data-callback=\"submitCallback\"
-            data-s=\"SHORTED\">
-        </div>\n\n<input type='hidden' name='q'
-            value='SHORTED'><input
-            type=\"hidden\" name=\"continue\"
-            value=\"https://trends.google.com/trends/SHORTED\">\n
-    </form>\n
-    <hr noshade size=\"1\" style=\"color:#ccc; background-color:#ccc;\">\n\n<div style=\"font-size:13px; line-break:
-        anywhere;\">\n<b>About this page</b><br><br>\n\nOur systems have detected unusual traffic from your computer
-        network. This page checks to see if it&#39;s really you sending the requests, and not a robot. <a href=\"#\"
-            onclick=\"document.getElementById('infoDiv').style.display='block' ;\">Why did this happen?</a><br><br>\n\n
-        <div id=\"infoDiv\" style=\"display:none; background-color:#eee; padding:10px; margin:0 0 15px 0;
-            line-height:1.4em;\">\nThis page appears when Google automatically detects requests coming from your
-            computer network which appear to be in violation of the <a href=\"//www.google.com/policies/terms/\">Terms
-                of Service</a>. The block will expire shortly after those requests stop. In the meantime, solving the
-            above CAPTCHA will let you continue to use our services.<br><br>This traffic may have been sent by malicious
-            software, a browser plug-in, or a script that sends automated requests. If you share your network
-            connection, ask your administrator for help &mdash; a different computer using the same IP address may be
-            responsible. <a href=\"//support.google.com/websearch/answer/86640\">Learn more</a><br><br>Sometimes you may
-            be asked to solve the CAPTCHA if you are using advanced terms that robots are known to use, or sending
-            requests very quickly.\n</div>\n\nIP address: 2a02:8434:ff02:3201:f820:6062:ea14:bbdd</div>\n
-</div>\n</body>\n
+        let result = "
+            <hr noshade size=\"1\" style=\"color:#ccc; background-color:#ccc;\"><br>\n<form id=\"captcha-form\" action=\"index\"
+                method=\"post\">\n<noscript>\n<div style=\"font-size:13px;\">\n In order to continue, please enable javascript
+                        on your web browser.\n</div>\n</noscript>\n
+                <script src=\"https://www.google.com/recaptcha/enterprise.js\" async defer></script>\n
+                <script>var submitCallback = function (response) { document.getElementById('captcha-form').submit(); };</script>\n
+                <div id=\"recaptcha\" class=\"g-recaptcha\" data-sitekey=\"6LfwuyUTAAAAAOAmoS0fdqijC2PbbdH4kjq62Y1b\"
+                    data-callback=\"submitCallback\"
+                    data-s=\"SHORTED\">
+                </div>\n\n<input type='hidden' name='q'
+                    value='SHORTED'><input
+                    type=\"hidden\" name=\"continue\"
+                    value=\"https://trends.google.com/trends/SHORTED\">\n
+            </form>\n
+            <hr noshade size=\"1\" style=\"color:#ccc; background-color:#ccc;\">\n\n<div style=\"font-size:13px; line-break:
+                anywhere;\">\n<b>About this page</b><br><br>\n\nOur systems have detected unusual traffic from your computer
+                network. This page checks to see if it&#39;s really you sending the requests, and not a robot. <a href=\"#\"
+                    onclick=\"document.getElementById('infoDiv').style.display='block' ;\">Why did this happen?</a><br><br>\n\n
+                <div id=\"infoDiv\" style=\"display:none; background-color:#eee; padding:10px; margin:0 0 15px 0;
+                    line-height:1.4em;\">\nThis page appears when Google automatically detects requests coming from your
+                    computer network which appear to be in violation of the <a href=\"//www.google.com/policies/terms/\">Terms
+                        of Service</a>. The block will expire shortly after those requests stop. In the meantime, solving the
+                    above CAPTCHA will let you continue to use our services.<br><br>This traffic may have been sent by malicious
+                    software, a browser plug-in, or a script that sends automated requests. If you share your network
+                    connection, ask your administrator for help &mdash; a different computer using the same IP address may be
+                    responsible. <a href=\"//support.google.com/websearch/answer/86640\">Learn more</a><br><br>Sometimes you may
+                    be asked to solve the CAPTCHA if you are using advanced terms that robots are known to use, or sending
+                    requests very quickly.\n</div>\n\nIP address: 2a02:8434:ff02:3201:f820:6062:ea14:bbdd</div>\n
+            </div>\n</body>\n
 
-</html>";
+            </html>";
         let err = response_problem(result);
 
         assert_eq!(err, Error::api_error("API rate limit exceeded"));
+    }
+
+    #[tokio::test]
+    async fn response_malformed_requests_problem() {
+        let result = "<main id=\"af-error-container\" role=\"main\"><a href=//www.google.com><span id=logo aria-label=Google role=img></span></a><p><b>400.</b> 
+        <ins>That’s an error.</ins>
+        <p>The server cannot process the request because it is malformed. It should not be retried. 
+        <ins>That’s all we know.</ins></main>";
+        let err = response_problem(result);
+
+        assert_eq!(
+            err,
+            Error::api_error("Malformed request, asked to not retry")
+        );
     }
 
     #[test]
