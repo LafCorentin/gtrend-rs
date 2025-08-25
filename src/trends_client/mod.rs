@@ -106,12 +106,12 @@ impl TrendsClient {
 
         match try_explore_result {
             Ok(explore_result) => Ok(ExploreClient::new(self.clone(), explore_result)?),
-            Err(_) => Err(response_problem(json_body)),
+            Err(_) => Err(response_problem(json_body, &request)),
         }
     }
 }
 
-fn response_problem(result: &str) -> Error {
+fn response_problem(result: &str, request: &Request) -> Error {
     let mut buf = Vec::new();
     let mut reader = Reader::from_str(result);
     reader.config_mut().trim_text(true);
@@ -141,7 +141,7 @@ fn response_problem(result: &str) -> Error {
     }
 
     if result.contains("The server cannot process the request because it is malformed.") {
-        return Error::api_error("Malformed request, asked to not retry");
+        return Error::API(format!("Malformed request, asked to not retry. Request: {request:?}"));
     }
 
     Error::UnexpectedResponse(format!("Unexpected response: {result}"))
@@ -206,13 +206,19 @@ mod tests {
 
     use super::*;
 
+    const EMPTY_REQUEST: Request = Request {
+        comparison_item: vec![],
+        category: Category::All,
+        property: Property::Web,
+    };
+
     #[tokio::test]
     async fn reponse_xml_problem() {
         let result = "<meta charset= utf-8>
 <meta name= viewport content=\"initial-scale=1, minimum-scale=1, width=device-width\">
 <title>Error 400 (Bad Request)!!1</title>";
 
-        let err = response_problem(result);
+        let err = response_problem(result, &EMPTY_REQUEST);
 
         assert_eq!(err, Error::api_error("Error 400 (Bad Request)!!1"));
     }
@@ -250,7 +256,7 @@ mod tests {
             </div>\n</body>\n
 
             </html>";
-        let err = response_problem(result);
+        let err = response_problem(result, &EMPTY_REQUEST);
 
         assert_eq!(err, Error::api_error("API rate limit exceeded"));
     }
@@ -261,11 +267,10 @@ mod tests {
         <ins>That’s an error.</ins>
         <p>The server cannot process the request because it is malformed. It should not be retried. 
         <ins>That’s all we know.</ins></main>";
-        let err = response_problem(result);
+        let err = response_problem(result, &EMPTY_REQUEST);
 
-        assert_eq!(
-            err,
-            Error::api_error("Malformed request, asked to not retry")
+        assert!(
+            err.to_string().contains("Malformed request"),
         );
     }
 
