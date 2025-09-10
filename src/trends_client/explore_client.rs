@@ -5,7 +5,9 @@ use std::collections::HashMap;
 
 use crate::{
     error::{Error, Result},
-    trends_client::{GeoMap, RelatedQueries, Timeseries, TrendsClient, sanitize_google_json},
+    trends_client::{
+        response_problem, sanitize_google_json, GeoMap, RelatedQueries, Timeseries, TrendsClient
+    },
 };
 
 /// Google trend Widget categories
@@ -49,7 +51,7 @@ pub enum WidgetKeyword {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Widget {
+struct Widget {
     token: String,
     request: serde_json::Value,
 }
@@ -75,20 +77,16 @@ impl ExploreClient {
         for widget in &explore_result.widgets {
             match widget
                 .get("template")
-                .ok_or_else(|| Error::UnexpectedResponse(format!("Irregular widget: {widget}")))?
+                .ok_or_irregular(widget)?
                 .as_str()
-                .ok_or_else(|| Error::UnexpectedResponse(format!("Irregular widget: {widget}")))?
+                .ok_or_irregular(widget)?
             {
                 "fe" => {
                     let id = widget
                         .get("id")
-                        .ok_or_else(|| {
-                            Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
-                        })?
+                        .ok_or_irregular(widget)?
                         .as_str()
-                        .ok_or_else(|| {
-                            Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
-                        })?;
+                        .ok_or_irregular(widget)?;
 
                     if id.contains("_note") {
                         continue;
@@ -105,17 +103,11 @@ impl ExploreClient {
                     keyword = WidgetKeyword::Keyword(
                         widget
                             .get("text")
-                            .ok_or_else(|| {
-                                Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
-                            })?
+                            .ok_or_irregular(widget)?
                             .get("text")
-                            .ok_or_else(|| {
-                                Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
-                            })?
+                            .ok_or_irregular(widget)?
                             .as_str()
-                            .ok_or_else(|| {
-                                Error::UnexpectedResponse(format!("Irregular widget: {widget}"))
-                            })?
+                            .ok_or_irregular(widget)?
                             .to_string(),
                     );
                 }
@@ -138,28 +130,44 @@ impl ExploreClient {
         self.widgets.keys().cloned().collect()
     }
 
-    async fn get_widget(&self, keyword: WidgetKeyword, category: WidgetCategory) -> Result<String> {
-        let widget = self
-            .widgets
+    fn get_widget(&self, keyword: WidgetKeyword, category: WidgetCategory) -> Result<&Widget> {
+        self.widgets
             .get(&(keyword.clone(), category))
             .ok_or_else(|| {
                 Error::Params(format!(
                     "No widget for category {category:?} and keyword {keyword:?}"
                 ))
-            })?;
+            })
+    }
+
+    /// Returns the request made by Google service for the given widget
+    pub fn get_widget_request(&self, keyword: WidgetKeyword, category: WidgetCategory) -> Result<&serde_json::Value> {
+        let widget = self.get_widget(keyword, category)?;
+        Ok(&widget.request)
+    }
+
+    async fn fetch_widget<T: for<'a> Deserialize<'a>>(
+        &self,
+        keyword: WidgetKeyword,
+        category: WidgetCategory,
+    ) -> Result<T> {
+        let widget = self.get_widget(keyword, category)?;
         let end_url = match category {
             WidgetCategory::Timeseries => "trends/api/widgetdata/multiline",
             WidgetCategory::GeoMap => "trends/api/widgetdata/comparedgeo",
             WidgetCategory::RelatedTopics => "trends/api/widgetdata/relatedsearches",
             WidgetCategory::RelatedQueries => "trends/api/widgetdata/relatedsearches",
         };
-        self.trends_client
-            .get(
-                end_url,
-                &serde_json::to_string(&widget.request)?,
-                Some(&widget.token),
-            )
-            .await
+
+        let request = serde_json::to_string(&widget.request)?;
+        
+        let content = self
+            .trends_client
+            .get(end_url, &request, Some(&widget.token))
+            .await?;
+
+        serde_json::from_str(sanitize_google_json(&content))
+            .map_err(|_| response_problem(&content, &request))
     }
 
     /// Returns the widget as a JSON object
@@ -168,28 +176,32 @@ impl ExploreClient {
         keyword: WidgetKeyword,
         category: WidgetCategory,
     ) -> Result<serde_json::Value> {
-        let widget = self.get_widget(keyword, category).await?;
-        let cleaned_widget = sanitize_google_json(&widget);
-        serde_json::from_str(cleaned_widget).map_err(Error::from)
+        self.fetch_widget(keyword, category).await
     }
 
     /// Returns the timeseries as a [`Timeseries`] object
     pub async fn get_timeseries(&self, keyword: WidgetKeyword) -> Result<Timeseries> {
-        let content = self.get_widget(keyword, WidgetCategory::Timeseries).await?;
-        serde_json::from_str(sanitize_google_json(&content)).map_err(Error::from)
+        self.fetch_widget(keyword, WidgetCategory::Timeseries).await
     }
 
     /// Returns the geomap as a [`GeoMap`] object
     pub async fn get_geomap(&self, keyword: WidgetKeyword) -> Result<GeoMap> {
-        let content = self.get_widget(keyword, WidgetCategory::GeoMap).await?;
-        serde_json::from_str(sanitize_google_json(&content)).map_err(Error::from)
+        self.fetch_widget(keyword, WidgetCategory::GeoMap).await
     }
 
     /// Returns the related queries as a [`RelatedQueries`] object
     pub async fn get_related_queries(&self, keyword: WidgetKeyword) -> Result<RelatedQueries> {
-        let content = self
-            .get_widget(keyword, WidgetCategory::RelatedQueries)
-            .await?;
-        serde_json::from_str(sanitize_google_json(&content)).map_err(Error::from)
+        self.fetch_widget(keyword, WidgetCategory::RelatedQueries)
+            .await
+    }
+}
+
+trait OkOrIrregular<T> {
+    fn ok_or_irregular(self, widget: &serde_json::Value) -> Result<T>;
+}
+
+impl<T> OkOrIrregular<T> for Option<T> {
+    fn ok_or_irregular(self, widget: &serde_json::Value) -> Result<T> {
+        self.ok_or_else(|| Error::UnexpectedResponse(format!("Irregular widget: {widget}")))
     }
 }

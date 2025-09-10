@@ -8,7 +8,7 @@ use reqwest::{
     header::{ACCEPT_LANGUAGE, HeaderMap, HeaderValue, USER_AGENT},
 };
 use serde::Serialize;
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 
 use crate::error::{Error, Result};
 use crate::{
@@ -101,17 +101,14 @@ impl TrendsClient {
             .await?;
         let json_body = sanitize_google_json(&json_body_unsanitize);
 
-        let try_explore_result: Result<ExploreResult> =
-            serde_json::from_str(json_body).map_err(Error::from);
+        let explore_result: ExploreResult =
+            serde_json::from_str(json_body).map_err(|_| response_problem(json_body, &request))?;
 
-        match try_explore_result {
-            Ok(explore_result) => Ok(ExploreClient::new(self.clone(), explore_result)?),
-            Err(_) => Err(response_problem(json_body, &request)),
-        }
+        ExploreClient::new(self.clone(), explore_result)
     }
 }
 
-fn response_problem(result: &str, request: &Request) -> Error {
+fn response_problem<T: fmt::Debug>(result: &str, request: &T) -> Error {
     let mut buf = Vec::new();
     let mut reader = Reader::from_str(result);
     reader.config_mut().trim_text(true);
@@ -141,10 +138,13 @@ fn response_problem(result: &str, request: &Request) -> Error {
     }
 
     if result.contains("The server cannot process the request because it is malformed.") {
-        return Error::API(format!("Malformed request, asked to not retry. Request: {}", serde_json::to_string(&request).unwrap()));
+        return Error::API(format!(
+            "Malformed request, asked to not retry. Request: {:?}",
+            request
+        ));
     }
 
-    Error::UnexpectedResponse(format!("Unexpected response: {result}"))
+    Error::UnexpectedResponse(format!("Unexpected response. Please send this log to https://github.com/LafCorentin/gtrend-rs/issues. Complete error : {result}"))
 }
 
 /// Google API returns json preceded by obstructing symbols
@@ -206,11 +206,7 @@ mod tests {
 
     use super::*;
 
-    const EMPTY_REQUEST: Request = Request {
-        comparison_item: vec![],
-        category: Category::All,
-        property: Property::Web,
-    };
+    const TEST_REQUEST: &str = "Test request";
 
     #[tokio::test]
     async fn reponse_xml_problem() {
@@ -218,7 +214,7 @@ mod tests {
 <meta name= viewport content=\"initial-scale=1, minimum-scale=1, width=device-width\">
 <title>Error 400 (Bad Request)!!1</title>";
 
-        let err = response_problem(result, &EMPTY_REQUEST);
+        let err = response_problem(result, &TEST_REQUEST);
 
         assert_eq!(err, Error::api_error("Error 400 (Bad Request)!!1"));
     }
@@ -256,7 +252,7 @@ mod tests {
             </div>\n</body>\n
 
             </html>";
-        let err = response_problem(result, &EMPTY_REQUEST);
+        let err = response_problem(result, &TEST_REQUEST);
 
         assert_eq!(err, Error::api_error("API rate limit exceeded"));
     }
@@ -267,11 +263,9 @@ mod tests {
         <ins>That’s an error.</ins>
         <p>The server cannot process the request because it is malformed. It should not be retried. 
         <ins>That’s all we know.</ins></main>";
-        let err = response_problem(result, &EMPTY_REQUEST);
+        let err = response_problem(result, &TEST_REQUEST);
 
-        assert!(
-            err.to_string().contains("Malformed request"),
-        );
+        assert!(err.to_string().contains("Malformed request"),);
     }
 
     #[test]
