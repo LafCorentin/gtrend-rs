@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use crate::{
     error::{Error, Result},
     trends_client::{
-        response_problem, sanitize_google_json, GeoMap, RelatedQueries, Timeseries, TrendsClient
+        GeoMap, RelatedQueries, Timeseries, TrendsClient, response_problem, sanitize_google_json,
     },
 };
 
@@ -74,19 +74,19 @@ impl ExploreClient {
         let mut widgets = HashMap::new();
         let mut keyword = WidgetKeyword::All;
 
-        for widget in &explore_result.widgets {
-            match widget
+        for widget_json in &explore_result.widgets {
+            match widget_json
                 .get("template")
-                .ok_or_irregular(widget)?
+                .ok_or_irregular(widget_json)?
                 .as_str()
-                .ok_or_irregular(widget)?
+                .ok_or_irregular(widget_json)?
             {
                 "fe" => {
-                    let id = widget
+                    let id = widget_json
                         .get("id")
-                        .ok_or_irregular(widget)?
+                        .ok_or_irregular(widget_json)?
                         .as_str()
-                        .ok_or_irregular(widget)?;
+                        .ok_or_irregular(widget_json)?;
 
                     if id.contains("_note") {
                         continue;
@@ -94,26 +94,32 @@ impl ExploreClient {
 
                     let category = WidgetCategory::try_from(id)?;
 
-                    widgets.insert(
-                        (keyword.clone(), category),
-                        serde_json::from_value(widget.clone())?,
-                    );
+                    let mut widget: Widget = serde_json::from_value(widget_json.clone())?;
+
+                    if let Some(serde_json::Value::String(time)) = widget
+                        .request
+                        .get_mut("time")
+                    {
+                        //*time = time.replace("\\:", ":");
+                    }
+
+                    widgets.insert((keyword.clone(), category), widget);
                 }
                 "fe_explore" => {
                     keyword = WidgetKeyword::Keyword(
-                        widget
+                        widget_json
                             .get("text")
-                            .ok_or_irregular(widget)?
+                            .ok_or_irregular(widget_json)?
                             .get("text")
-                            .ok_or_irregular(widget)?
+                            .ok_or_irregular(widget_json)?
                             .as_str()
-                            .ok_or_irregular(widget)?
+                            .ok_or_irregular(widget_json)?
                             .to_string(),
                     );
                 }
                 _ => {
                     return Err(Error::UnexpectedResponse(format!(
-                        "Irregular widget: {widget}"
+                        "Irregular widget: {widget_json}"
                     )));
                 }
             }
@@ -141,7 +147,11 @@ impl ExploreClient {
     }
 
     /// Returns the request made by Google service for the given widget
-    pub fn get_widget_request(&self, keyword: WidgetKeyword, category: WidgetCategory) -> Result<&serde_json::Value> {
+    pub fn get_widget_request(
+        &self,
+        keyword: WidgetKeyword,
+        category: WidgetCategory,
+    ) -> Result<&serde_json::Value> {
         let widget = self.get_widget(keyword, category)?;
         Ok(&widget.request)
     }
@@ -160,7 +170,7 @@ impl ExploreClient {
         };
 
         let request = serde_json::to_string(&widget.request)?;
-        
+
         let content = self
             .trends_client
             .get(end_url, &request, Some(&widget.token))

@@ -74,8 +74,7 @@ impl TrendsClient {
     }
 
     async fn get(&self, end_url: &str, req: &str, token: Option<&str>) -> Result<String> {
-        let response = self
-            .client
+        self.client
             .get(format!("{}/{}", self.endpoint, end_url))
             .query(&[
                 ("hl", self.lang.to_string().as_str()),
@@ -86,11 +85,17 @@ impl TrendsClient {
                 ("tz", "-120"),
             ])
             .send()
-            .await?;
-
-        response.text().await.map_err(Error::from)
+            .await?
+            .text()
+            .await
+            .map_err(Error::from)
     }
 
+    /// Returns an [`ExploreClient`] from a [`Request`]
+    ///
+    /// The API is unstable when handling time ranges that combine very different scales.
+    /// While long ranges (e.g. several months) are usually accepted, adding a small
+    /// offset (e.g. a few hours) to the same range can cause the request to fail.
     pub async fn explore(&self, request: Request) -> Result<ExploreClient> {
         let json_body_unsanitize = self
             .get(
@@ -144,11 +149,13 @@ fn response_problem<T: fmt::Debug>(result: &str, request: &T) -> Error {
         ));
     }
 
-    Error::UnexpectedResponse(format!("Unexpected response. Please send this log to https://github.com/LafCorentin/gtrend-rs/issues. Complete error : {result}"))
+    Error::UnexpectedResponse(format!(
+        "Unexpected response. Please send this log to https://github.com/LafCorentin/gtrend-rs/issues.\n Request : {request:#?}\n Complete error : {result}"
+    ))
 }
 
-/// Google API returns json preceded by obstructing symbols
-/// This function removes them
+/// Google API returns json preceded by obstructing symbols.
+/// This function removes them.
 fn sanitize_google_json(raw: &str) -> &str {
     match raw.find(['{', '[']) {
         Some(pos) => &raw[pos..],

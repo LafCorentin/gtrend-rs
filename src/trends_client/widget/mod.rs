@@ -11,9 +11,3 @@ pub mod timeseries;
 pub struct Text {
     pub text: String,
 }
-
-/// Google trend widget request
-#[derive(Debug, Deserialize, Clone)]
-pub struct WidgetRequest {
-    
-}
