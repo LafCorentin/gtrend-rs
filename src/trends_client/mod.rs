@@ -125,6 +125,14 @@ fn response_problem<T: fmt::Debug>(result: &str, request: &T) -> Error {
                     match text.decode() {
                         Ok(decoded) => {
                             let title = decoded.into_owned();
+                            if title.contains("429") {
+                                return Error::api_error("Error 429 : rate limit exceeded");
+                            }
+                            if title.contains("400") {
+                                return Error::API(format!(
+                                    "Error 400 : Bad Request. Request : {request:?}"
+                                ));
+                            }
                             return Error::API(title);
                         }
                         Err(e) => return e.into(),
@@ -139,7 +147,7 @@ fn response_problem<T: fmt::Debug>(result: &str, request: &T) -> Error {
     }
 
     if result.contains("Our systems have detected unusual traffic from your computer") {
-        return Error::api_error("API rate limit exceeded");
+        return Error::api_error("API rate traffic limit exceeded");
     }
 
     if result.contains("The server cannot process the request because it is malformed.") {
@@ -150,7 +158,7 @@ fn response_problem<T: fmt::Debug>(result: &str, request: &T) -> Error {
     }
 
     Error::UnexpectedResponse(format!(
-        "Unexpected response. Please send this log to https://github.com/LafCorentin/gtrend-rs/issues.\n Request : {request:#?}\n Complete error : {result}"
+        "Unexpected response. Please send this log to https://github.com/LafCorentin/gtrend-rs/issues.\n\n Request : {request:#?}\n\n Complete error : {result}"
     ))
 }
 
@@ -216,14 +224,25 @@ mod tests {
     const TEST_REQUEST: &str = "Test request";
 
     #[tokio::test]
-    async fn reponse_xml_problem() {
+    async fn reponse_xml_error_400() {
         let result = "<meta charset= utf-8>
 <meta name= viewport content=\"initial-scale=1, minimum-scale=1, width=device-width\">
 <title>Error 400 (Bad Request)!!1</title>";
 
         let err = response_problem(result, &TEST_REQUEST);
 
-        assert_eq!(err, Error::api_error("Error 400 (Bad Request)!!1"));
+        assert!(err.to_string().contains("Error 400"));
+    }
+
+    #[tokio::test]
+    async fn reponse_xml_error_429() {
+        let result = "<meta charset= utf-8>
+<meta name= viewport content=\"initial-scale=1, minimum-scale=1, width=device-width\">
+<title>Error 429 (Bad Request)!!1</title>";
+
+        let err = response_problem(result, &TEST_REQUEST);
+
+        assert!(err.to_string().contains("Error 429"));
     }
 
     #[tokio::test]
@@ -261,7 +280,7 @@ mod tests {
             </html>";
         let err = response_problem(result, &TEST_REQUEST);
 
-        assert_eq!(err, Error::api_error("API rate limit exceeded"));
+        assert_eq!(err, Error::api_error("API rate traffic limit exceeded"));
     }
 
     #[tokio::test]
