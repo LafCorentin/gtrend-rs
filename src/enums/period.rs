@@ -1,15 +1,41 @@
 //! Represent period predefined by Google Trend.   
 
-use chrono::{DateTime, Utc};
+use std::result;
+use chrono::{offset::LocalResult, DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use serde::Serialize;
+
+use crate::error::{Result, Error};
 
 /// Simplified date field
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Date(String);
 
 impl Date {
-    pub fn new(date: &DateTime<Utc>) -> Self {
-        Self(date.format("%Y-%m-%d").to_string())
+    pub fn new(year: i32, month: u32, day: u32) -> Result<Self> {
+        
+        if LocalResult::None == Utc.with_ymd_and_hms(year, month, day, 0, 0, 0) {
+            return Err(Error::params_error("Invalid date"));
+        }
+
+        Ok(Self(format!("{year:04}-{month:02}-{day:02}")))
+    }
+}
+
+impl<Tz: TimeZone> From<&DateTime<Tz>> for Date {
+    fn from(value: &DateTime<Tz>) -> Self {
+        Self(value.date_naive().format("%Y-%m-%d").to_string())
+    }
+}
+
+impl From<&NaiveDate> for Date {
+    fn from(value: &NaiveDate) -> Self {
+        Self(value.format("%Y-%m-%d").to_string())
+    }
+}
+
+impl From<&NaiveDateTime> for Date {
+    fn from(value: &NaiveDateTime) -> Self {
+        Self(value.format("%Y-%m-%d").to_string())
     }
 }
 
@@ -20,8 +46,25 @@ impl Date {
 pub struct DateHour(String);
 
 impl DateHour {
-    pub fn new(date: &DateTime<Utc>) -> Self {
-        Self(date.format("%Y-%m-%dT%H").to_string())
+    pub fn new(year: i32, month: u32, day: u32, hour: u32) -> Result<Self> {
+        
+        if LocalResult::None == Utc.with_ymd_and_hms(year, month, day, hour, 0, 0) {
+            return Err(Error::params_error("Invalid date or hour"));
+        }
+
+        Ok(Self(format!("{year:04}-{month:02}-{day:02}T{hour:02}")))
+    }
+}
+
+impl<Tz: TimeZone> From<&DateTime<Tz>> for DateHour {
+    fn from(value: &DateTime<Tz>) -> Self {
+        Self(value.naive_utc().format("%Y-%m-%dT%H").to_string())
+    }
+}
+
+impl From<&NaiveDateTime> for DateHour {
+    fn from(value: &NaiveDateTime) -> Self {
+        Self(value.format("%Y-%m-%dT%H").to_string())
     }
 }
 
@@ -32,6 +75,7 @@ pub enum Period {
     Dates(Date, Date),
 
     /// Dates with specified hours.
+    /// 
     /// Might fail if the delta is too big. Max seems to be 7 days at September 2025.
     DatesHour(DateHour, DateHour),
 
@@ -40,7 +84,7 @@ pub enum Period {
 }
 
 impl Serialize for Period {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> result::Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
@@ -99,8 +143,8 @@ mod tests {
     #[test]
     fn test_date() {
         let now = Utc::now();
-        let date = Date::new(&now);
-        let period = Period::Dates(date.clone(), date.clone());
+        let date= Date::from(&now);
+        let period = Period::Dates(date.clone(), date);
 
         assert_eq!(
             serde_json::to_string(&period).unwrap(),
@@ -111,8 +155,8 @@ mod tests {
     #[test]
     fn test_date_hour() {
         let now = Utc::now();
-        let date = DateHour::new(&now);
-        let period = Period::DatesHour(date.clone(), date.clone());
+        let date = DateHour::from(&now);
+        let period = Period::DatesHour(date.clone(), date);
 
         assert_eq!(
             serde_json::to_string(&period).unwrap(),
