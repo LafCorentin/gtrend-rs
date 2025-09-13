@@ -93,16 +93,7 @@ impl ExploreClient {
                     }
 
                     let category = WidgetCategory::try_from(id)?;
-
-                    let mut widget: Widget = serde_json::from_value(widget_json.clone())?;
-
-                    if let Some(serde_json::Value::String(time)) = widget
-                        .request
-                        .get_mut("time")
-                    {
-                        //*time = time.replace("\\:", ":");
-                    }
-
+                    let widget: Widget = serde_json::from_value(widget_json.clone())?;
                     widgets.insert((keyword.clone(), category), widget);
                 }
                 "fe_explore" => {

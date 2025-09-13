@@ -107,7 +107,6 @@ async fn test_request(request: Request, client: TrendsClient) {
                 explore_client.get_geomap(keyword).await.unwrap();
             }
             WidgetCategory::RelatedTopics => {
-                println!("Data: {:?}", data);
                 assert_eq!(&data.to_string(), "{\"default\":{\"rankedList\":[]}}")
             }
             WidgetCategory::RelatedQueries => {

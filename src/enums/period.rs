@@ -14,6 +14,8 @@ impl Date {
 }
 
 /// Simplified date with hour field
+/// 
+/// Seems to be limited to the span of a week.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DateHour(String);
 
@@ -30,7 +32,7 @@ pub enum Period {
     Dates(Date, Date),
 
     /// Dates with specified hours.
-    /// Might fail if the delta is too big. Max seems to be 8 days at August 2025.
+    /// Might fail if the delta is too big. Max seems to be 7 days at September 2025.
     DatesHour(DateHour, DateHour),
 
     /// Google Trend predefined periods
@@ -53,30 +55,39 @@ impl Serialize for Period {
 /// Google Trend predefined periods
 #[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PredefinedPeriod {
+    /// One hour
     #[serde(rename = "now 1-H")]
     OneHour,
 
+    /// Four hours
     #[serde(rename = "now 4-H")]
     FourHour,
 
+    /// One day
     #[serde(rename = "now 1-d")]
     OneDay,
 
+    /// Seven days
     #[serde(rename = "now 7-d")]
     SevenDay,
 
+    /// Thirty days
     #[serde(rename = "today 1-m")]
     ThirtyDay,
 
+    /// Ninety days
     #[serde(rename = "today 3-m")]
     NinetyDay,
 
+    /// One year
     #[serde(rename = "today 12-m")]
     OneYear,
 
+    /// Five years
     #[serde(rename = "today 5-y")]
     FiveYear,
 
+    /// Since 2004
     #[serde(rename = "all")]
     Since2004,
 }
