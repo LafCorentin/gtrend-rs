@@ -1,4 +1,4 @@
-use chrono::{TimeZone as _, Utc};
+use chrono::NaiveDate;
 use gtrend_rs::{
     ComparaisonElem, Request, TrendsClient, WidgetCategory,
     enums::{Category, Country, Date, DateHour, Period, PredefinedPeriod, Property},
@@ -11,8 +11,18 @@ async fn global() {
             keyword: "breath".to_string(),
             geo: Country::US,
             time: Period::DatesHour(
-                DateHour::from(&Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap()),
-                DateHour::from(&Utc.with_ymd_and_hms(2024, 1, 8, 0, 0, 0).unwrap()),
+                DateHour::from(
+                    &NaiveDate::from_ymd_opt(2024, 1, 1)
+                        .unwrap()
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap(),
+                ),
+                DateHour::from(
+                    &NaiveDate::from_ymd_opt(2024, 1, 1)
+                        .unwrap()
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap(),
+                ),
             ),
         }],
         Category::RespiratoryConditions,
@@ -31,8 +41,8 @@ async fn global() {
                 keyword: "find".to_string(),
                 geo: Country::US,
                 time: Period::Dates(
-                    Date::from(&Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap()),
-                    Date::from(&Utc.with_ymd_and_hms(2024, 1 + 8, 1, 0, 0, 0).unwrap()),
+                    Date::from(&NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()),
+                    Date::from(&NaiveDate::from_ymd_opt(2024, 1 + 8, 1).unwrap()),
                 ),
             },
         ],

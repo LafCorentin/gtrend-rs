@@ -1,6 +1,6 @@
 //! Represent period predefined by Google Trend.   
 
-use chrono::{DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc, offset::LocalResult};
+use chrono::{NaiveDate, NaiveDateTime};
 use serde::Serialize;
 use std::result;
 
@@ -12,28 +12,15 @@ pub struct Date(String);
 
 impl Date {
     pub fn new(year: i32, month: u32, day: u32) -> Result<Self> {
-        if LocalResult::None == Utc.with_ymd_and_hms(year, month, day, 0, 0, 0) {
-            return Err(Error::params_error("Invalid date"));
-        }
-
-        Ok(Self(format!("{year:04}-{month:02}-{day:02}")))
-    }
-}
-
-impl<Tz: TimeZone> From<&DateTime<Tz>> for Date {
-    fn from(value: &DateTime<Tz>) -> Self {
-        Self(value.date_naive().format("%Y-%m-%d").to_string())
+        Ok(Date::from(
+            &NaiveDate::from_ymd_opt(year, month, day)
+                .ok_or_else(|| Error::params_error("Invalid date"))?,
+        ))
     }
 }
 
 impl From<&NaiveDate> for Date {
     fn from(value: &NaiveDate) -> Self {
-        Self(value.format("%Y-%m-%d").to_string())
-    }
-}
-
-impl From<&NaiveDateTime> for Date {
-    fn from(value: &NaiveDateTime) -> Self {
         Self(value.format("%Y-%m-%d").to_string())
     }
 }
@@ -46,17 +33,12 @@ pub struct DateHour(String);
 
 impl DateHour {
     pub fn new(year: i32, month: u32, day: u32, hour: u32) -> Result<Self> {
-        if LocalResult::None == Utc.with_ymd_and_hms(year, month, day, hour, 0, 0) {
-            return Err(Error::params_error("Invalid date or hour"));
-        }
-
-        Ok(Self(format!("{year:04}-{month:02}-{day:02}T{hour:02}")))
-    }
-}
-
-impl<Tz: TimeZone> From<&DateTime<Tz>> for DateHour {
-    fn from(value: &DateTime<Tz>) -> Self {
-        Self(value.naive_utc().format("%Y-%m-%dT%H").to_string())
+        Ok(DateHour::from(
+            &NaiveDate::from_ymd_opt(year, month, day)
+                .ok_or_else(|| Error::params_error("Invalid date"))?
+                .and_hms_opt(hour, 0, 0)
+                .ok_or_else(|| Error::params_error("Invalid time"))?,
+        ))
     }
 }
 
@@ -136,12 +118,14 @@ pub enum PredefinedPeriod {
 
 #[cfg(test)]
 mod tests {
+    use chrono::Utc;
+
     use super::*;
 
     #[test]
     fn test_date() {
         let now = Utc::now();
-        let date = Date::from(&now);
+        let date = Date::from(&now.naive_utc().date());
         let period = Period::Dates(date.clone(), date);
 
         assert_eq!(
@@ -153,7 +137,7 @@ mod tests {
     #[test]
     fn test_date_hour() {
         let now = Utc::now();
-        let date = DateHour::from(&now);
+        let date = DateHour::from(&now.naive_utc());
         let period = Period::DatesHour(date.clone(), date);
 
         assert_eq!(
