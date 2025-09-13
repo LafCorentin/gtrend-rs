@@ -1,10 +1,10 @@
 //! Represent period predefined by Google Trend.   
 
-use std::result;
-use chrono::{offset::LocalResult, DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc, offset::LocalResult};
 use serde::Serialize;
+use std::result;
 
-use crate::error::{Result, Error};
+use crate::error::{Error, Result};
 
 /// Simplified date field
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -12,7 +12,6 @@ pub struct Date(String);
 
 impl Date {
     pub fn new(year: i32, month: u32, day: u32) -> Result<Self> {
-        
         if LocalResult::None == Utc.with_ymd_and_hms(year, month, day, 0, 0, 0) {
             return Err(Error::params_error("Invalid date"));
         }
@@ -40,14 +39,13 @@ impl From<&NaiveDateTime> for Date {
 }
 
 /// Simplified date with hour field
-/// 
+///
 /// Seems to be limited to the span of a week.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DateHour(String);
 
 impl DateHour {
     pub fn new(year: i32, month: u32, day: u32, hour: u32) -> Result<Self> {
-        
         if LocalResult::None == Utc.with_ymd_and_hms(year, month, day, hour, 0, 0) {
             return Err(Error::params_error("Invalid date or hour"));
         }
@@ -75,7 +73,7 @@ pub enum Period {
     Dates(Date, Date),
 
     /// Dates with specified hours.
-    /// 
+    ///
     /// Might fail if the delta is too big. Max seems to be 7 days at September 2025.
     DatesHour(DateHour, DateHour),
 
@@ -143,7 +141,7 @@ mod tests {
     #[test]
     fn test_date() {
         let now = Utc::now();
-        let date= Date::from(&now);
+        let date = Date::from(&now);
         let period = Period::Dates(date.clone(), date);
 
         assert_eq!(
