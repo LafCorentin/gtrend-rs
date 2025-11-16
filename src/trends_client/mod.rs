@@ -37,6 +37,7 @@ pub struct TrendsClient {
 }
 
 impl TrendsClient {
+    /// Creates a new [`TrendsClient`].
     pub async fn new(endpoint: String, lang: Lang, country: Country) -> Result<Self> {
         // Camouflage headers
         let mut headers = HeaderMap::new();
@@ -69,6 +70,7 @@ impl TrendsClient {
         })
     }
 
+    /// Returns a [`TrendsClient`] with default parameters.
     pub async fn try_default() -> Result<Self> {
         Self::new(DEFAULT_ADDRESS.to_string(), Lang::EN, Country::ALL).await
     }
@@ -167,7 +169,7 @@ fn response_problem<T: fmt::Debug>(result: &str, request: &T) -> Error {
 fn sanitize_google_json(raw: &str) -> &str {
     match raw.find(['{', '[']) {
         Some(pos) => &raw[pos..],
-        None => raw, // au cas où c'est vraiment le chaos
+        None => raw,
     }
 }
 
