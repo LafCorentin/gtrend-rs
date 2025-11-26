@@ -98,7 +98,7 @@ impl TrendsClient {
     /// The API is unstable when handling time ranges that combine very different scales.
     /// While long ranges (e.g. several months) are usually accepted, adding a small
     /// offset (e.g. a few hours) to the same range can cause the request to fail.
-    pub async fn explore(&self, request: Request) -> Result<ExploreClient> {
+    pub async fn explore<'a>(&self, request: Request<'a>) -> Result<ExploreClient> {
         let json_body_unsanitize = self
             .get(
                 "trends/api/explore",
@@ -176,15 +176,15 @@ fn sanitize_google_json(raw: &str) -> &str {
 /// Google Trend request
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Request {
-    comparison_item: Vec<ComparaisonElem>,
+pub struct Request<'a> {
+    comparison_item: Vec<ComparaisonElem<'a>>,
     category: Category,
     property: Property,
 }
 
-impl Request {
+impl<'a> Request<'a> {
     pub fn new(
-        comparison_item: Vec<ComparaisonElem>,
+        comparison_item: Vec<ComparaisonElem<'a>>,
         category: Category,
         property: Property,
     ) -> Result<Self> {
@@ -205,15 +205,15 @@ impl Request {
 }
 
 /// Google Trend comparaison item
-#[derive(Debug, Serialize)]
-pub struct ComparaisonElem {
-    pub keyword: String,
+#[derive(Debug, Serialize, Clone)]
+pub struct ComparaisonElem<'a> {
+    pub keyword: &'a str,
     pub geo: Country,
     pub time: Period,
 }
 
-impl ComparaisonElem {
-    pub fn new(keyword: String, geo: Country, time: Period) -> Self {
+impl<'a> ComparaisonElem<'a> {
+    pub fn new(keyword: &'a str, geo: Country, time: Period) -> Self {
         Self { keyword, geo, time }
     }
 }

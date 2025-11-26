@@ -6,9 +6,10 @@ use gtrend_rs::{
 
 #[tokio::test]
 async fn global() {
+    let keyword = "breath".to_string();
     let simple_request = Request::new(
         vec![ComparaisonElem {
-            keyword: "breath".to_string(),
+            keyword: &keyword,
             geo: Country::US,
             time: Period::DatesHour(
                 DateHour::from(
@@ -30,15 +31,17 @@ async fn global() {
     )
     .unwrap();
 
+    let keyword_1 = "google".to_string();
+    let keyword_2 = "find".to_string();
     let request_diff_dates = Request::new(
         vec![
             ComparaisonElem {
-                keyword: "google".to_string(),
+                keyword: &keyword_1,
                 geo: Country::US,
                 time: Period::Predefined(PredefinedPeriod::OneYear),
             },
             ComparaisonElem {
-                keyword: "find".to_string(),
+                keyword: &keyword_2,
                 geo: Country::US,
                 time: Period::Dates(
                     Date::from(&NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()),
@@ -54,12 +57,12 @@ async fn global() {
     let request_diff_geo = Request::new(
         vec![
             ComparaisonElem {
-                keyword: "google".to_string(),
+                keyword: &keyword_1,
                 geo: Country::US,
                 time: Period::Predefined(PredefinedPeriod::OneYear),
             },
             ComparaisonElem {
-                keyword: "find".to_string(),
+                keyword: &keyword_2,
                 geo: Country::FR,
                 time: Period::Predefined(PredefinedPeriod::OneYear),
             },
@@ -72,17 +75,17 @@ async fn global() {
     let triple_request = Request::new(
         vec![
             ComparaisonElem {
-                keyword: "test".to_string(),
+                keyword: &keyword,
                 geo: Country::US,
                 time: Period::Predefined(PredefinedPeriod::OneYear),
             },
             ComparaisonElem {
-                keyword: "google".to_string(),
+                keyword: &keyword_1,
                 geo: Country::US,
                 time: Period::Predefined(PredefinedPeriod::OneYear),
             },
             ComparaisonElem {
-                keyword: "find".to_string(),
+                keyword: &keyword_2,
                 geo: Country::US,
                 time: Period::Predefined(PredefinedPeriod::OneYear),
             },
@@ -100,7 +103,7 @@ async fn global() {
     test_request(triple_request, client).await;
 }
 
-async fn test_request(request: Request, client: TrendsClient) {
+async fn test_request<'a>(request: Request<'a>, client: TrendsClient) {
     let explore_client: gtrend_rs::ExploreClient = client.explore(request).await.unwrap();
 
     for (keyword, category) in explore_client.available_widgets() {
