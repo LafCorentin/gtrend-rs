@@ -20,7 +20,7 @@ async fn main() {
     let explore_client = client.explore(simple_request).await.unwrap();
 
     let stats = explore_client
-        .get_timeseries(WidgetKeyword::All)
+        .get_timeseries(&WidgetKeyword::All)
         .await
         .unwrap();
 

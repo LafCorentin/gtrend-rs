@@ -108,22 +108,22 @@ async fn test_request<'a>(request: Request<'a>, client: TrendsClient) {
 
     for (keyword, category) in explore_client.available_widgets() {
         let data = explore_client
-            .get_widget_as_json(keyword.clone(), category)
+            .get_widget_as_json(&keyword, category)
             .await
             .unwrap();
 
         match category {
             WidgetCategory::Timeseries => {
-                explore_client.get_timeseries(keyword).await.unwrap();
+                explore_client.get_timeseries(&keyword).await.unwrap();
             }
             WidgetCategory::GeoMap => {
-                explore_client.get_geomap(keyword).await.unwrap();
+                explore_client.get_geomap(&keyword).await.unwrap();
             }
             WidgetCategory::RelatedTopics => {
                 assert_eq!(&data.to_string(), "{\"default\":{\"rankedList\":[]}}")
             }
             WidgetCategory::RelatedQueries => {
-                explore_client.get_related_queries(keyword).await.unwrap();
+                explore_client.get_related_queries(&keyword).await.unwrap();
             }
         }
     }

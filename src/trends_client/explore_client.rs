@@ -1,5 +1,6 @@
 //! This module is responsible for fetching widgets from Google Trends.
 
+use enum_map::{Enum, EnumMap};
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -11,7 +12,7 @@ use crate::{
 };
 
 /// Google trend Widget categories
-#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq, Hash, Enum)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum WidgetCategory {
     Timeseries,
@@ -66,13 +67,13 @@ pub(crate) struct ExploreResult {
 #[derive(Debug)]
 pub struct ExploreClient {
     trends_client: TrendsClient,
-    widgets: HashMap<(WidgetKeyword, WidgetCategory), Widget>,
+    widgets: EnumMap<WidgetCategory, HashMap<WidgetKeyword, Widget>>,
 }
 
 impl ExploreClient {
     pub(crate) fn new(trends_client: TrendsClient, explore_result: ExploreResult) -> Result<Self> {
-        let mut widgets = HashMap::new();
-        let mut keyword = WidgetKeyword::All;
+        let mut widgets = EnumMap::<WidgetCategory, HashMap<WidgetKeyword, Widget>>::default();
+        let mut keyword = None;
 
         for widget_json in &explore_result.widgets {
             match widget_json
@@ -94,10 +95,13 @@ impl ExploreClient {
 
                     let category = WidgetCategory::try_from(id)?;
                     let widget: Widget = serde_json::from_value(widget_json.clone())?;
-                    widgets.insert((keyword.clone(), category), widget);
+                    widgets[category].insert(
+                        keyword.take().unwrap_or(WidgetKeyword::All),
+                        widget,
+                    );
                 }
                 "fe_explore" => {
-                    keyword = WidgetKeyword::Keyword(
+                    keyword = Some(WidgetKeyword::Keyword(
                         widget_json
                             .get("text")
                             .ok_or_irregular(widget_json)?
@@ -106,7 +110,7 @@ impl ExploreClient {
                             .as_str()
                             .ok_or_irregular(widget_json)?
                             .to_string(),
-                    );
+                    ));
                 }
                 _ => {
                     return Err(Error::UnexpectedResponse(format!(
@@ -124,23 +128,27 @@ impl ExploreClient {
 
     /// Returns all available widgets
     pub fn available_widgets(&self) -> Vec<(WidgetKeyword, WidgetCategory)> {
-        self.widgets.keys().cloned().collect()
+        let mut widgets = Vec::new();
+        for (category, widgetmap) in self.widgets.iter() {
+            for keyword in widgetmap.keys() {
+                widgets.push((keyword.clone(), category));
+            }
+        }
+        widgets
     }
 
-    fn get_widget(&self, keyword: WidgetKeyword, category: WidgetCategory) -> Result<&Widget> {
-        self.widgets
-            .get(&(keyword.clone(), category))
-            .ok_or_else(|| {
-                Error::Params(format!(
-                    "No widget for category {category:?} and keyword {keyword:?}"
-                ))
-            })
+    fn get_widget(&self, keyword: &WidgetKeyword, category: WidgetCategory) -> Result<&Widget> {
+        self.widgets[category].get(keyword).ok_or_else(|| {
+            Error::Params(format!(
+                "No widget for category {category:?} and keyword {keyword:?}"
+            ))
+        })
     }
 
     /// Returns the request made by Google service for the given widget
     pub fn get_widget_request(
         &self,
-        keyword: WidgetKeyword,
+        keyword: &WidgetKeyword,
         category: WidgetCategory,
     ) -> Result<&serde_json::Value> {
         let widget = self.get_widget(keyword, category)?;
@@ -149,7 +157,7 @@ impl ExploreClient {
 
     async fn fetch_widget<T: for<'a> Deserialize<'a>>(
         &self,
-        keyword: WidgetKeyword,
+        keyword: &WidgetKeyword,
         category: WidgetCategory,
     ) -> Result<T> {
         let widget = self.get_widget(keyword, category)?;
@@ -174,24 +182,24 @@ impl ExploreClient {
     /// Returns the widget as a JSON object
     pub async fn get_widget_as_json(
         &self,
-        keyword: WidgetKeyword,
+        keyword: &WidgetKeyword,
         category: WidgetCategory,
     ) -> Result<serde_json::Value> {
         self.fetch_widget(keyword, category).await
     }
 
     /// Returns the timeseries as a [`Timeseries`] object
-    pub async fn get_timeseries(&self, keyword: WidgetKeyword) -> Result<Timeseries> {
+    pub async fn get_timeseries(&self, keyword: &WidgetKeyword) -> Result<Timeseries> {
         self.fetch_widget(keyword, WidgetCategory::Timeseries).await
     }
 
     /// Returns the geomap as a [`GeoMap`] object
-    pub async fn get_geomap(&self, keyword: WidgetKeyword) -> Result<GeoMap> {
+    pub async fn get_geomap(&self, keyword: &WidgetKeyword) -> Result<GeoMap> {
         self.fetch_widget(keyword, WidgetCategory::GeoMap).await
     }
 
     /// Returns the related queries as a [`RelatedQueries`] object
-    pub async fn get_related_queries(&self, keyword: WidgetKeyword) -> Result<RelatedQueries> {
+    pub async fn get_related_queries(&self, keyword: &WidgetKeyword) -> Result<RelatedQueries> {
         self.fetch_widget(keyword, WidgetCategory::RelatedQueries)
             .await
     }
