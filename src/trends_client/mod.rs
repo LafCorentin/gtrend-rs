@@ -79,8 +79,8 @@ impl TrendsClient {
         self.client
             .get(format!("{}/{}", self.endpoint, end_url))
             .query(&[
-                ("hl", self.lang.to_string().as_str()),
-                ("geo", self.country.to_string().as_str()),
+                ("hl", serde_json::to_string(&self.lang)?.as_str()),
+                ("geo", serde_json::to_string(&self.country)?.as_str()),
                 ("tz", "-120"),
                 ("req", req),
                 ("token", token.unwrap_or("")),
@@ -98,7 +98,7 @@ impl TrendsClient {
     /// The API is unstable when handling time ranges that combine very different scales.
     /// While long ranges (e.g. several months) are usually accepted, adding a small
     /// offset (e.g. a few hours) to the same range can cause the request to fail.
-    pub async fn explore<'a>(&self, request: Request<'a>) -> Result<ExploreClient> {
+    pub async fn explore<'a>(self, request: Request<'a>) -> Result<ExploreClient> {
         let json_body_unsanitize = self
             .get(
                 "trends/api/explore",
@@ -111,7 +111,7 @@ impl TrendsClient {
         let explore_result: ExploreResult =
             serde_json::from_str(json_body).map_err(|_| response_problem(json_body, &request))?;
 
-        ExploreClient::new(self.clone(), explore_result)
+        ExploreClient::new(self, explore_result)
     }
 }
 

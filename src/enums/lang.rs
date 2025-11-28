@@ -1,11 +1,9 @@
 //! Enum to represent all langage supported by google.   
 
 use serde::Serialize;
-use strum_macros::Display;
 
 /// Represent all languages supported by google.
-#[derive(Debug, Display, Serialize, Clone, Copy, PartialEq, Eq, Hash)]
-#[strum(serialize_all = "kebab_case")]
+#[derive(Debug,  Serialize, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Lang {
     AF,
     AR,
@@ -70,11 +68,9 @@ pub enum Lang {
     VI,
     YI,
     #[allow(non_camel_case_types)]
-    #[strum(serialize = "zh-CN")]
     #[serde(rename = "zh-CN")]
     ZH_CN,
     #[allow(non_camel_case_types)]
-    #[strum(serialize = "zh-TW")]
     #[serde(rename = "zh-TW")]
     ZH_TW,
 }
