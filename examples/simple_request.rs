@@ -3,7 +3,7 @@ use gtrend_rs::{
     enums::{Category, Country, Period, PredefinedPeriod, Property},
 };
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     let simple_request = Request::new(
         vec![ComparaisonElem {
