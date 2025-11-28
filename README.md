@@ -31,7 +31,7 @@ let simple_request = Request::new(
         geo: Country::ALL,
         time: Period::Predefined(PredefinedPeriod::OneYear),
     }],
-    Category::RespiratoryConditions,
+    Category::Programming,
     Property::Web,
 ).unwrap();
 

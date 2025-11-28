@@ -11,7 +11,7 @@ async fn main() {
             geo: Country::ALL,
             time: Period::Predefined(PredefinedPeriod::OneYear),
         }],
-        Category::RespiratoryConditions,
+        Category::Programming,
         Property::Web,
     )
     .unwrap();
