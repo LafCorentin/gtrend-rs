@@ -3,7 +3,7 @@
 use serde::Serialize;
 
 /// Represent all languages supported by google.
-#[derive(Debug,  Serialize, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Lang {
     AF,
     AR,

@@ -95,10 +95,7 @@ impl ExploreClient {
 
                     let category = WidgetCategory::try_from(id)?;
                     let widget: Widget = serde_json::from_value(widget_json.clone())?;
-                    widgets[category].insert(
-                        keyword.take().unwrap_or(WidgetKeyword::All),
-                        widget,
-                    );
+                    widgets[category].insert(keyword.take().unwrap_or(WidgetKeyword::All), widget);
                 }
                 "fe_explore" => {
                     keyword = Some(WidgetKeyword::Keyword(
