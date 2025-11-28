@@ -25,11 +25,21 @@ cargo add gtrend-rs
 The google API works by first sending a `Request` containing keywords, period of time etc. Then it returns accesses to widgets containing the interesting data. This first return is represented in the crate as `ExploreClient`, from which one can access the widgets.
 
 ```rust
-let client: TrendsClient = TrendsClient::try_default().await.unwrap();
-let explore_client: ExploreClient = client.explore(simple_request).await.unwrap();
+let simple_request = Request::new(
+    vec![ComparaisonElem {
+        keyword: "rust",
+        geo: Country::ALL,
+        time: Period::Predefined(PredefinedPeriod::OneYear),
+    }],
+    Category::RespiratoryConditions,
+    Property::Web,
+).unwrap();
 
-let timeseries : Timeseries = explore_client
-    .get_timeseries(WidgetKeyword::All)
+let client = TrendsClient::try_default().await.unwrap();
+let explore_client = client.explore(simple_request).await.unwrap();
+
+let stats = explore_client
+    .get_timeseries(&WidgetKeyword::All)
     .await
     .unwrap();
 ```

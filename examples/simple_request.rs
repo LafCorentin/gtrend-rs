@@ -7,7 +7,7 @@ use gtrend_rs::{
 async fn main() {
     let simple_request = Request::new(
         vec![ComparaisonElem {
-            keyword: "cough",
+            keyword: "rust",
             geo: Country::ALL,
             time: Period::Predefined(PredefinedPeriod::OneYear),
         }],
