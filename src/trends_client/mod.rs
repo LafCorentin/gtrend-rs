@@ -213,7 +213,7 @@ pub struct ComparaisonElem<'a> {
 }
 
 impl<'a> ComparaisonElem<'a> {
-    pub fn new(keyword: &'a str, geo: Country, time: Period) -> Self {
+    pub const fn new(keyword: &'a str, geo: Country, time: Period) -> Self {
         Self { keyword, geo, time }
     }
 }
